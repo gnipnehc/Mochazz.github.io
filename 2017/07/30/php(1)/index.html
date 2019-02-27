@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>PHP之基础入门 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">PHP之基础入门</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2017/07/30/php(1)/">2017-07-30</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/编程语言/">编程语言</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h3 id="PHP四种不同的标记风格"><a href="#PHP四种不同的标记风格" class="headerlink" title="PHP四种不同的标记风格"></a>PHP四种不同的标记风格</h3><pre><code>&lt;?php 代码 ?&gt;
+官方推荐风格
+&lt;? 代码 ?&gt;
+短标记风格，需配置文件php.ini中开启short+open_tag
+&lt;% 代码 %&gt;
+ASP风格，需配置文件php.ini中开启asp_tags
+&lt;script language=”php”&gt; 代码 &lt;/script&gt;
+JavaScript标记的风格，这种风格在任何情况下都可以使用。
+</code></pre><h3 id="注释"><a href="#注释" class="headerlink" title="注释"></a><a id="more"></a>注释</h3><h4 id="单行注释"><a href="#单行注释" class="headerlink" title="单行注释"></a>单行注释</h4><pre><code>C++风格单行注释
+//这是单行注释
+Shell风格单行注释
+#这是单行注释
+</code></pre><h4 id="多行注释"><a href="#多行注释" class="headerlink" title="多行注释"></a>多行注释</h4><pre><code>/*
+ *这是多行注释
+ */
+</code></pre><h3 id="变量声明"><a href="#变量声明" class="headerlink" title="变量声明"></a>变量声明</h3><p><img src="/img/PHP/p1.png" alt></p>
+<h3 id="引用赋值"><a href="#引用赋值" class="headerlink" title="引用赋值"></a>引用赋值</h3><p>使用引用赋值时，两个变量将会指向内存中的同一个存储空间，任何一个变量发生变化都会引起另一个变量的变化。<br><img src="/img/PHP/p2.png" alt></p>
+<h3 id="变量"><a href="#变量" class="headerlink" title="变量"></a>变量</h3><h4 id="可变变量"><a href="#可变变量" class="headerlink" title="可变变量"></a>可变变量</h4><p>这种写法不推荐在项目开发中使用，因为代码可读性差，但是以前却可以用来写过狗一句话<br><img src="/img/PHP/p3.png" alt></p>
+<h4 id="全局变量"><a href="#全局变量" class="headerlink" title="全局变量"></a>全局变量</h4><p>在关键字前加global</p>
+<h4 id="超全局变量组"><a href="#超全局变量组" class="headerlink" title="超全局变量组"></a>超全局变量组</h4><p><img src="/img/PHP/p4.png" alt></p>
+<h3 id="常量"><a href="#常量" class="headerlink" title="常量"></a>常量</h3><h4 id="自定义常量"><a href="#自定义常量" class="headerlink" title="自定义常量"></a>自定义常量</h4><p>boolean define(string name,mixed value[, bool case_insensitive])<br>当case_insensitive为true时，常量名不区分大小写<br><img src="/img/PHP/p5.png" alt></p>
+<h4 id="魔术常量"><a href="#魔术常量" class="headerlink" title="魔术常量"></a>魔术常量</h4><p><img src="/img/PHP/p6.png" alt><br>PHP为弱类型语言，变量类型由数据决定<br><img src="/img/PHP/p7.png" alt></p>
+<h3 id="字符串"><a href="#字符串" class="headerlink" title="字符串"></a>字符串</h3><h5 id="单引号"><a href="#单引号" class="headerlink" title="单引号"></a>单引号</h5><p>变量和转义的序列都不会进行转义</p>
+<h4 id="双引号"><a href="#双引号" class="headerlink" title="双引号"></a>双引号</h4><p>PHP会处理双引号括起来的字符串、变量以及转义序列<br><img src="/img/PHP/p8.png" alt></p>
+<h3 id="数组"><a href="#数组" class="headerlink" title="数组"></a>数组</h3><p>由键值对组成，键可以是数字，也可以是字符串<br><img src="/img/PHP/p9.png" alt><br>sort按数值从小到大排序，键变成顺序索引，按数字、ASCII字符、中文字符排序。<br>rsort按数值从大到小排序，键变成顺序索引。<br>ksort按键从小到大排序，键在原来的基础上发生变化。<br>asort按数值从小到大排序，键在原来的基础上发生变化。</p>
+<h3 id="类型转换"><a href="#类型转换" class="headerlink" title="类型转换"></a>类型转换</h3><h4 id="隐式强制类型转换"><a href="#隐式强制类型转换" class="headerlink" title="隐式强制类型转换"></a>隐式强制类型转换</h4><p>不同类型进行数值比较<br><img src="/img/PHP/p10.png" alt></p>
+<h4 id="显式强制类型转换"><a href="#显式强制类型转换" class="headerlink" title="显式强制类型转换"></a>显式强制类型转换</h4><p><img src="/img/PHP/p11.png" alt></p>
+<h4 id="强制类型转换函数"><a href="#强制类型转换函数" class="headerlink" title="强制类型转换函数"></a>强制类型转换函数</h4><p><img src="/img/PHP/p12.png" alt></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2017/07/30/php(1)/">https://mochazz.github.io/2017/07/30/php(1)/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/PHP/">PHP</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2017/08/01/php(2)/">&lt; php之字符串和正则匹配</a><a class="next" href="/2017/07/29/shift/">通过shift快捷键运行后门 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

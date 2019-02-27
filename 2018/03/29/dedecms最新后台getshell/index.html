@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>代码审计之织梦最新版后台代码注入 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">代码审计之织梦最新版后台代码注入</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2018/03/29/dedecms最新后台getshell/">2018-03-29</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/代码审计/">代码审计</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h4 id="1、payload如下："><a href="#1、payload如下：" class="headerlink" title="1、payload如下："></a>1、payload如下：</h4><figure class="highlight"><table><tr><td class="code"><pre><span class="line">http://localhost/dede/tag_test_action.php?url=a&amp;token=&amp;partcode=&#123;dede:mochazz name='source' runphp='yes'&#125;phpinfo();&#123;/dede:mochazz&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="2、效果图："><a href="#2、效果图：" class="headerlink" title="2、效果图："></a>2、效果图：</h4><p><img src="/img/dedecms2/1.gif" alt="1"></p>
+<a id="more"></a>
+<h4 id="3、具体分析："><a href="#3、具体分析：" class="headerlink" title="3、具体分析："></a>3、具体分析：</h4><p>首先，程序最开始部分有一个 <strong>CSRF</strong> 检测函数 <strong>csrf_check()</strong> ，该函数位于 <strong>dede/config.php</strong>文件中，可以看到改文件仅仅只是判断是否设置了 <strong>$token</strong> 以及 <strong>$_SESSION[‘token’]</strong> 是否与 <strong>$token</strong> 相等。然而在初始状态下， <strong>$_SESSION[‘token’]</strong> 的值为空，所以我们就可传入 <strong>$token</strong>为空，来绕过该 <strong>CSRF</strong> 检测，即<code>http://localhost/dede/tag_test_action.php?token=</code>。(下面是 <strong>csrf_check()</strong> 函数，可以添加调试语句，查看初始状态下 <strong>$_SESSION[‘token’]</strong> 的值)</p>
+<p><img src="/img/dedecms2/2.png" alt="2"></p>
+<p>继续看 <strong>dede/tag_test_action.php</strong> 文件，初始状态下 <strong>$partcode</strong> 为空，这个变量又是我们可以控制的，先记下，等下要用到。<img src="/img/dedecms2/3.png" alt="3"></p>
+<p>继续往下看，可以看到 <strong>$typeid</strong> 变量的值为0，所以进入27行代码 <strong>else $pv = new PartView();</strong> 我们继续跟踪  <strong>PartView()</strong> 。</p>
+<p><img src="/img/dedecms2/4.png" alt="4"></p>
+<p><strong>PartView()</strong> 类位于 <strong>include/arc.partview.class.php</strong> 文件第22行( <strong>在进行代码审计的时候，可以借助linux的grep目录辅助，参数R表示递归查找，参数i表示不区分大小写，参数n表示显示第几行</strong> )</p>
+<p><img src="/img/dedecms2/5.png" alt="5"></p>
+<p><img src="/img/dedecms2/6.png" alt="6"></p>
+<p>在<strong>PartView()</strong> 类的构造函数中，又实例化一个 <strong>DedeTagParse</strong> 对象（如上图），该类用于定义dede标签格式，可以在 <strong>include/dedetag.class.php</strong> 文件第93行处找到。</p>
+<p><img src="/img/dedecms2/7.png" alt="7"></p>
+<p>回到 <strong>dede/tag_test_action.php</strong> 文件，看到程序调用了 <strong>PartView</strong> 类的 <strong>SetTemplet</strong> 方法，跟进该方法。</p>
+<p><img src="/img/dedecms2/8.png" alt="8"></p>
+<p>进入改方法后，会进入第一个if语句，并调用 <strong>DedeTagPages</strong> 类的 <strong>LoadSource</strong> 方法，继续跟进 <strong>LoadSource</strong> 方法。</p>
+<p><img src="/img/dedecms2/9.png" alt="9"></p>
+<p>可以看到（下图）， <strong>LoadSource</strong> 方法先将我们 <strong>$str</strong> 写入一个inc文件，然后又调用 <strong>LoadTemplate</strong>方法，这里的<strong>$str</strong>就是我们传入的<strong>$partcode</strong> 。</p>
+<p><img src="/img/dedecms2/10.png" alt="10"></p>
+<p> <strong>LoadTemplate</strong> 先调用 <strong>SetDefault</strong> 方法做了一些初始化操作，接着进入else语句，循环读取刚刚写入文件的内容，存在 <strong>SourceString</strong> 中，然后调用 <strong>LoadCache</strong> 方法，跟进 <strong>LoadCache</strong> 方法。</p>
+<p><img src="/img/dedecms2/11.png" alt="11"></p>
+<p><img src="/img/dedecms2/12.png" alt="12"></p>
+<p><strong>LoadCache</strong> 返回false之后，就直接进入else语句，调用 <strong>ParseTemplet</strong> 方法，继续跟进。发现实例化一个 <strong>DedeAttributeParse</strong> 对象，该对象为dede的属性解析器，此时仅初始化了一些属性，暂时不跟进，继续看<strong>ParseTemplet</strong> 方法。</p>
+<p><img src="/img/dedecms2/13.png" alt="13"></p>
+<p><img src="/img/dedecms2/14.png" alt="深度截图_选择区域_20180329143605"></p>
+<p>for循环代码太长，这里用省略号替代，主要的功能是遍历字符串模板，提取数据，然后调用 <strong>SaveCache</strong> 方法写入文件中，如下图：</p>
+<p><img src="/img/dedecms2/15.png" alt="15"></p>
+<p><img src="/img/dedecms2/16.png" alt="16"></p>
+<p>下面有要回到 <strong>dede/tag_test_action.php</strong> 文件，执行最后一句 <strong>$pv-&gt;Display();</strong> ，即调用 <strong>PartView</strong> 类的 <strong>Display</strong> 方法，发现该方法又调用了<strong>DedeTagParse</strong> 类的 <strong>Display</strong> 方法，继续跟进。</p>
+<p><img src="/img/dedecms2/17.png" alt="17"></p>
+<p><strong>DedeTagParse</strong> 类的 <strong>Display</strong> 方法调用了 <strong>GetResult</strong> 方法，跟进</p>
+<p><img src="/img/dedecms2/18.png" alt="18"></p>
+<p>调用了 <strong>AssignSysTag</strong> 方法</p>
+<p><img src="/img/dedecms2/19.png" alt="19"></p>
+<p>在 <strong>AssignSysTag</strong> 方法中 <strong>$CTag</strong> 为 <strong>DedeTag</strong> 实例化对象，这里的 <strong>$CTag-&gt;TagName</strong> 就是 <strong>$partcode</strong> 中dede:后面的那一小串单词，这里没有写else处理语句，所以我们只要不填写 <strong>global、include、foreach、var</strong> 可以不进入if、else if语句，直接来到下面的<code>if( $CTag-&gt;GetAtt(&#39;runphp&#39;) == &#39;yes&#39; )</code> ，跟进 <strong>GetAtt</strong> 方法(注意这里是 <strong>DedeTag</strong> 类的 <strong>GetAtt</strong> 方法，不是 <strong>DedeAttribute</strong> 类的 <strong>GetAtt</strong> 方法)</p>
+<p><img src="/img/dedecms2/20.png" alt="20"></p>
+<p><img src="/img/dedecms2/21.png" alt="21"></p>
+<p><img src="/img/dedecms2/22.png" alt="22"></p>
+<p>可以看到 <strong>DedeTag</strong> 类的 <strong>GetAtt</strong> 方法又调用了 <strong>DedeAttribute</strong> 类的 <strong>GetAtt</strong> 方法，继续跟进。</p>
+<p><img src="/img/dedecms2/23.png" alt="23"></p>
+<p>使用 <strong>var_dump()</strong> 来查看 <strong>$this-&gt;Items</strong> 数据类型，可以发现 <strong>$partcode</strong> 里面的<strong>name=’source’ runphp=’yes’</strong> 会以数组键值对的形式存储在 <strong>$this-&gt;Items</strong> ，中，所以我们这里构造partcode={dede:tag name=’source’ <strong>runphp=’yes’</strong>}，这样我们就进入了 <strong>AssignSysTag</strong> 方法中的 <strong>$this-&gt;RunPHP($CTag, $i)</strong> 语句。</p>
+<p><img src="/img/dedecms2/24.png" alt="24"></p>
+<p><img src="/img/dedecms2/25.png" alt="25"></p>
+<p>在 <strong>RunPHP</strong> 方法中，<strong>$phpcode</strong> 在经过正则匹配后会被 <strong>eval</strong> 函数执行，而<strong>$phpcode</strong>变量是从 <strong>DedeTag-&gt;GetInnerText()</strong> 方法获取的，我们跟进 <strong>GetInnerText</strong> 方法。</p>
+<p><img src="/img/dedecms2/26.png" alt="26"></p>
+<p><img src="/img/dedecms2/27.png" alt="27"></p>
+<p>其实这里的 <strong>$this-&gt;InnerText</strong> ，在前面的 <strong>LoadCache</strong> 方法中以及 <strong>DedeTag</strong> 类初始化中，可以找到定义。这个就是eval函数中 <strong>$phpcode</strong> 的值。</p>
+<p><img src="/img/dedecms2/28.png" alt="28"></p>
+<p>此次审计到此结束，整个过程有点绕，需要花一些时间，才能理清思路。</p>
+<h4 id="4、参考文章："><a href="#4、参考文章：" class="headerlink" title="4、参考文章："></a>4、参考文章：</h4><p><a href="https://xz.aliyun.com/t/2224" target="_blank" rel="noopener">Dedecms V5.7后台任意代码执行[CVE-2018-7700]</a></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2018/03/29/dedecms最新后台getshell/">https://mochazz.github.io/2018/03/29/dedecms最新后台getshell/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/dedecms/">dedecms</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2018/03/30/dedecms任意文件名修改+CSRF/">&lt; 代码审计之织梦最新版任意文件名修改漏洞</a><a class="next" href="/2018/03/28/Nmap渗透测试精通指南/">转载 | Nmap渗透测试精通指南 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

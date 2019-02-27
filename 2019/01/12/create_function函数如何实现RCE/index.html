@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>create_function函数如何实现RCE | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">create_function函数如何实现RCE</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2019/01/12/create_function函数如何实现RCE/">2019-01-12</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/CTF竞赛训练/">CTF竞赛训练</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><p>这是在 <a href="https://code-breaking.com/" target="_blank" rel="noopener"><strong>code-breaking</strong></a> 中遇到的一道题目，名为：easy - function。题目地址：<a href="http://51.158.75.42:8087" target="_blank" rel="noopener">http://51.158.75.42:8087</a> </p>
+<p><img src="/img/create_function函数如何实现RCE/1.png" alt="1"></p>
+<p><strong>??</strong> 是 <strong>PHP7</strong> 中新增的运算符，用于替代需要 <strong>isset</strong> 的场合，是一种语法糖。接着正则对 <strong>$action</strong> 变量进行了正则匹配，该变量如果符合正常函数名命名规则，则显示该题目源码，否则就作为函数名进行可变变量动态调用函数。</p>
+<p>正常函数名都是以字母数字或者下划线开头的，那么有没有什么变量名不是按照这个规则命名的呢？这让我想到之前看到的一种过狗一句话：</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span> <span class="keyword">namespace</span> <span class="title">ccc</span>;\<span class="keyword">eval</span>($_REQUEST[<span class="string">'a'</span>]);</span><br></pre></td></tr></table></figure>
+<p>该木马在 <strong>eval</strong> 函数前面添加了一个反斜杠，竟然也能正常运行。我们查阅PHP手册，会发现官方有这么一段说明:</p>
+<p><img src="/img/create_function函数如何实现RCE/2.png" alt="2"></p>
+<p>也就是说 <strong>所有PHP内置函数</strong> 均在 <strong>\命名空间下</strong> ，这样就可以绕过上面的正则了。那么我们使用 <strong>\create_function</strong> 来作为 <strong>$action</strong> 的值，此时 <strong>create_function</strong> 函数的第二个参数可控。我们先来看看 <strong>create_function</strong> 函数的定义。</p>
+<p><img src="/img/create_function函数如何实现RCE/3.png" alt="3"></p>
+<p>可以看到手册上说， <strong>create_function</strong> 函数内部实现与 <strong>eval</strong> 函数一样，我们再来看看 <strong>create_function</strong> 函数对应的内核源码。（ <strong>php-src/Zend/zend_builtin_functions.c:1901</strong> ）</p>
+<p><img src="/img/create_function函数如何实现RCE/4.png" alt="4"></p>
+<p><img src="/img/create_function函数如何实现RCE/5.png" alt="5"></p>
+<p>上述代码用PHP语言来表达的话，实际上就是下图 <strong>第3行</strong> 代码（下图第2、3行代码是等价的）：</p>
+<p><img src="/img/create_function函数如何实现RCE/6.png" alt="6"></p>
+<p>在这道题目中，用户可控的是第二个参数，也就是 <strong>code</strong> 部分，所以我们只要闭合 <strong>{</strong> 后，注入代码并注释后面的 <strong>}</strong> ，即可达到代码执行的效果。最终使用如下 <strong>payload8</strong> 即可解题：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http://51.158.75.42:8087/?action=\create_function&amp;arg=return 111;&#125;print_r(scandir(&apos;../&apos;));highlight_file(&apos;../flag_h0w2execute_arb1trary_c0de&apos;);&#123;</span><br></pre></td></tr></table></figure>
+<p><img src="/img/create_function函数如何实现RCE/7.png" alt="7"></p>
+<p>如果是第一个参数用户可控，那么记得闭合 <strong>(</strong> 号即可。</p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2019/01/12/create_function函数如何实现RCE/">https://mochazz.github.io/2019/01/12/create_function函数如何实现RCE/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/CTF/">CTF</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2019/01/13/preg_match函数绕过/">&lt; preg_match函数绕过</a><a class="next" href="/2019/01/03/利用PHP的一些特性绕过WAF/">利用PHP的一些特性绕过WAF &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

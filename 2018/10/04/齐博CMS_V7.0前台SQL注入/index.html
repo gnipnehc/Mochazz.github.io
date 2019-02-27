@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>齐博CMS_V7.0前台SQL注入 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">齐博CMS_V7.0前台SQL注入</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2018/10/04/齐博CMS_V7.0前台SQL注入/">2018-10-04</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/代码审计/">代码审计</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>今天看到一篇文章分析齐博CMS注入的文章：<a href="http://www.gzsec.org/?p=485" target="_blank" rel="noopener">齐博CMS激活验证处SQL注入</a> ，得空分析了一下，总体感觉漏洞利用比较鸡肋。</p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>实际上齐博CMS是有对变量进行过滤的，但是本次注入点就是利用程序自带的编码，使得这些过滤形同虚设。</p>
+<p>注入点在 <strong>inc/class.user.php</strong> 文件中的 <strong>get_passport</strong> 方法，可以清晰的看到SQL语句进行了变量拼接。</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/1.png" alt="1"></p>
+<p>同个文件的 <strong>get_allInfo</strong> 方法调用了 <strong>get_passport</strong> 。</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/2.png" alt="2"></p>
+<p>变量加密处的位置在 <strong>do/activate.php</strong> 文件，代码如下：</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/3.png" alt="3"></p>
+<p>可以看到上图 <strong>第7行</strong> 代码，将经过 <strong>mymd5</strong> 函数解密后的数据直接赋值给 <strong>$username</strong> 和 <strong>$password</strong> 两个变量，并带入数据库查询。解密后的数据没有经过处理，这是导致发生SQL注入的关键。我们可以看看 <strong>mymd5</strong> 函数的代码。</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/4.png" alt="4"></p>
+<p>可以看到这个函数包含了加密与解密。然而要想利用这个注入点，我们需要知道 <strong>$webdb[mymd5]</strong> 的值，而这个变量的值在每个网站搭建时会有一个初始值，且都不一样，这也是这个漏洞的鸡肋之处。我们可以登录后台查看到该变量对应的值。</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/5.png" alt="5"></p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>要想利用这个漏洞，我们只需要知道 <strong>$webdb[mymd5]</strong> 的值，并将相关函数抽取出来，加密我们的 <strong>payload</strong> 即可。具体如下：</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/6.png" alt="6"></p>
+<p>然后利用生成的加密字符串构造如下payload，即可成功注入SQL语句：</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/7.png" alt="7"></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>后面想试试通过前台获取 <strong>$webdb[mymd5]</strong> 的值，或者说控制该值，发现都不是很容易，于是作罢。</p>
+<p><img src="/img/齐博CMS_V7.0前台SQL注入/8.png" alt="8"></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2018/10/04/齐博CMS_V7.0前台SQL注入/">https://mochazz.github.io/2018/10/04/齐博CMS_V7.0前台SQL注入/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/齐博CMS/">齐博CMS</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2018/10/09/代码审计Day13 - 特定场合下addslashes函数的绕过/">&lt; 代码审计Day13 - 特定场合下addslashes函数的绕过</a><a class="next" href="/2018/09/30/DuomiCms3.0最新版漏洞挖掘/">DuomiCms3.0最新版漏洞挖掘 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>代码审计 | ThinkPHP3.x/5.x框架任意文件包含 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">代码审计 | ThinkPHP3.x/5.x框架任意文件包含</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2018/04/30/代码审计 | ThinkPHP3.x、5.x框架任意文件包含/">2018-04-30</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/代码审计/">代码审计</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h3 id="ThinkPHP简介"><a href="#ThinkPHP简介" class="headerlink" title="ThinkPHP简介"></a>ThinkPHP简介</h3><p>ThinkPHP是一个快速、兼容而且简单的轻量级国产PHP开发框架，诞生于2006年初，原名FCS，2007年元旦正式更名为ThinkPHP，遵循Apache2开源协议发布，从Struts结构移植过来并做了改进和完善，同时也借鉴了国外很多优秀的框架和模式，使用面向对象的开发结构和MVC模式，融合了Struts的思想和TagLib（标签库）、RoR的ORM映射和ActiveRecord模式。<a id="more"></a></p>
+<h3 id="漏洞简述"><a href="#漏洞简述" class="headerlink" title="漏洞简述"></a>漏洞简述</h3><p>ThinkPHP在加载模版解析变量时存在变量覆盖的问题，且没有对 <strong>$cacheFile</strong> 进行相应的消毒处理，导致模板文件的路径可以被覆盖，从而导致任意文件包含漏洞的发生。</p>
+<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>下载thinkphp框架，在 <strong>“thinkphp\library\think\Controller.php”</strong> 文件中写入如下代码：</p>
+<p><img src="/img/thinkphp任意文件包含/1.png" alt="1"></p>
+<p>在 <strong>“application\index\view\index”</strong> 目录下建立一个 <strong>index.html</strong> 文件，不建立会出现 <strong>模板文件不存在</strong> 错误。</p>
+<p>至于其他配置数据库连接文件以及thinkphp框架结构，可参考文章：<a href="https://mochazz.github.io/2018/04/14/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%20%7C%20ThinkPHP%205.0.x%E6%A1%86%E6%9E%B6SQL%E6%B3%A8%E2%BC%8A/">代码审计 | ThinkPHP5.0.x框架SQL注⼊</a></p>
+<h3 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><p>攻击者可以通过POST方式访问链接：<code>http://192.168.1.8/thinkphp/public/index.php/index/index/index</code> ，POST的数据为：<code>cacheFile=../phpinfo.php</code> ，这个 <strong>cacheFile</strong> 变量就是可以被攻击者覆盖的变量。</p>
+<p><img src="/img/thinkphp任意文件包含/9.png" alt="9"></p>
+<p>程序在一开始会调用 <strong>“thinkphp\library\think\Controller.php”</strong> 文件中的 <strong>assign</strong> 方法，并传入 <strong>POST</strong> 数组数据， <strong>assign</strong> 方法代码如下：</p>
+<p><img src="/img/thinkphp任意文件包含/2.png" alt="2"></p>
+<p> <strong>assign</strong> 方法又调用了视图类中的 <strong>assign</strong> 方法， <strong>assign</strong> 方法在 <strong>“thinkphp\library\think\View.php”</strong> 文件中。可以看到该方法用 <strong>array_merge</strong> 方法将 <strong>POST</strong> 数组数据合并到 <strong>$this-&gt;data</strong> 中，代码如下：</p>
+<p><img src="/img/thinkphp任意文件包含/3.png" alt="3"></p>
+<p>我们再来看 <strong>fetch</strong> 方法，该方法用于输出模板内容，代码定义在 <strong>“thinkphp\library\think\Controller.php”</strong> 文件中，该方法同样调用的是视图类中的 <strong>fetch</strong> 方法，代码如下：</p>
+<p><img src="/img/thinkphp任意文件包含/4.png" alt="4"></p>
+<p>查看 <strong>“thinkphp\library\think\View.php”</strong> 文件中的 <strong>fetch</strong> 方法，这里注代码<code>$this-&gt;engine-&gt;$method($template, $vars, $config);</code> </p>
+<p><img src="/img/thinkphp任意文件包含/5.png" alt="5"></p>
+<p>在默认情况下 <strong>$method</strong> 的值为 <strong>fetch</strong> ，也就是说调用了视图引擎中的 <strong>fetch</strong> 方法，该方法在<strong>“thinkphp\library\think\view\driver\Think.php”</strong> 文件中，代码如下：</p>
+<p><img src="/img/thinkphp任意文件包含/6.png" alt="6"></p>
+<p>视图引擎的 <strong>fetch</strong> 方法又调用了模板类的<strong>fetch</strong> 方法，继续跟进 。我们注意到 <strong>“thinkphp\library\think\Template.php”</strong> 文件中语句：<code>$this-&gt;storage-&gt;read($cacheFile, $this-&gt;data);</code> 这是用于读取编译存储，此时 <strong>$cacheFile</strong> 的值类似于 <strong>runtime\temp\md5(×××).php</strong> </p>
+<p><img src="/img/thinkphp任意文件包含/7.png" alt="7"></p>
+<p>我们跟进该 <strong>read</strong> 方法，在<strong>“thinkphp\library\think\template\driver\File.php”</strong> 文件中，我们看到程序使用 <strong>extract</strong> 方法，并用了 <strong>EXTR_OVERWRITE</strong> 参数，该参数的作用是：如果有冲突，则覆盖已有的变量。 <strong>extract</strong> 方法将 <strong>$vars</strong> 数组中的数据元素注册成变量，而 <strong>$vars</strong> 数组又包含了 <strong>POST</strong> 数组数据，这也就是导致变量覆盖的原因。然后程序在最后包含了 <strong>$cacheFile</strong> 文件，最终导致了任意文件包含。具体代码如下：</p>
+<p><img src="/img/thinkphp任意文件包含/8.png" alt="8"></p>
+<p>如果目标站点开启了 <strong>allow_url_include</strong> ，攻击者甚至可以执行任意代码，攻击方法如下：</p>
+<p><img src="/img/thinkphp任意文件包含/10.png" alt="10"></p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://www.kancloud.cn/manual/thinkphp5/118122" target="_blank" rel="noopener">ThinkPHP5.0完全开发手册</a></p>
+<p><a href="https://mp.weixin.qq.com/s/IuKjTS0Q0VVzuoeSwqZ5Gw" target="_blank" rel="noopener">斗鱼安全：ThinkPHP3.x/5.x框架缺陷可导致任意文件包含</a></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2018/04/30/代码审计 | ThinkPHP3.x、5.x框架任意文件包含/">https://mochazz.github.io/2018/04/30/代码审计 | ThinkPHP3.x、5.x框架任意文件包含/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/ThinkPHP/">ThinkPHP</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2018/05/06/CBC字节翻转攻击/">&lt; CBC字节翻转攻击</a><a class="next" href="/2018/04/17/代码审计 | ThinkPHP3.2.x框架SQL注⼊/">代码审计 | ThinkPHP3.2.x框架SQL注⼊ &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>

