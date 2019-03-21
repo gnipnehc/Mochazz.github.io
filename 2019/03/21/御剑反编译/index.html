@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>C#反编译之御剑WEB目录扫描优化版 | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://hpdoger.me">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">C#反编译之御剑WEB目录扫描优化版</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2019/03/21/御剑反编译/">2019-03-21</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/代码审计/">代码审计</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><p>前天晚上，看到朋友说御剑出新版本了，但是这次需要输入激活码才能用。由于处于内测阶段，可以直接找御剑作者要激活码。结果我发现这款软件在我的虚拟机中，获取机器码时会崩溃，这样就没法生成激活码了(ಥ_ಥ)。于是，我打算自己破解，直接将激活相关代码删除，最终得到一个不需要激活码即可运行的御剑（￣▽￣）。</p>
+<p>先用 <strong>PEID</strong> 查壳，发现没加壳，且是 <strong>C#</strong> 语言编写的，那么反编译就简单多了。</p>
+<p><img src="/img/御剑反编译/0.png" alt="0"></p>
+<p>首先，我们用 <a href="https://github.com/0xd4d/dnSpy/releases" target="_blank" rel="noopener">dnSpy</a> 将 <strong>御剑WEB目录扫描优化版.exe</strong> 反编译，并保存。</p>
+<p><img src="/img/御剑反编译/1.png" alt="1"></p>
+<p>接着用 <strong>visual studio 2017</strong> 打开刚刚反编译的项目。主程序为 <strong>MyApplication.cs</strong> ，直接运行会报许多错误。</p>
+<p><img src="/img/御剑反编译/2.png" alt="2"></p>
+<p>接下来主要就是修改编译时出现的错误并将激活码功能去掉。第一次编译会报 <strong>意外的字符“$”</strong> ，我们需要将整个项目中的 <strong>VB$AnonymousDelegate_0</strong> 替换成 <strong>AnonymousDelegate_0</strong> ，并将 <strong>VB$AnonymousDelegate_0.cs</strong> 文件名改成 <strong>AnonymousDelegate_0.cs</strong> ，还有 <strong>御剑WEB目录扫描优化版.csproj</strong> 文件中的 <strong>VB$AnonymousDelegate_0</strong> 也替换成 <strong>AnonymousDelegate_0</strong> 。</p>
+<p><img src="/img/御剑反编译/3.png" alt="3"></p>
+<p>再次编译，就会遇到 <strong><a href="https://cn.bing.com/search?q=CS0579++C%23+Duplicate+attribute&amp;form=VSHELP" target="_blank" rel="noopener">CS0579</a> 特性重复</strong> 错误，试了好多方法都没解决，我就直接把它注释了。</p>
+<p><img src="/img/御剑反编译/4.png" alt="4"></p>
+<p>接着编译，会遇到 <strong>使用了未赋值的局部变量”enumerator”</strong> ，猜测应该是用来关闭某种资源或流的，例如文件资源，这里我直接将其注释掉。</p>
+<p><img src="/img/御剑反编译/5.png" alt="5"></p>
+<p>然后再将为初始变量 <strong>num、num3</strong> 都初始化为0，这两个变量是用来存储HTTP响应码的。</p>
+<p><img src="/img/御剑反编译/6.png" alt="6"></p>
+<p>最后，将 <strong>Form.cs</strong> 中的 <strong>CheckJH</strong> 函数中 <strong>Flag</strong> 设置成 <strong>true</strong> 并删去校验激活码相关代码。</p>
+<p><img src="/img/御剑反编译/7.png" alt="7"></p>
+<p>这样便绕过了激活，功能也正常，最后放一张运行效果图。</p>
+<p><img src="/img/御剑反编译/8.png" alt="8"></p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2019/03/21/御剑反编译/">https://mochazz.github.io/2019/03/21/御剑反编译/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/ThinkPHP/">ThinkPHP</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="next" href="/2019/03/20/ThinkPHP5漏洞分析之SQL注入1/">ThinkPHP5漏洞分析之SQL注入(一) &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>
